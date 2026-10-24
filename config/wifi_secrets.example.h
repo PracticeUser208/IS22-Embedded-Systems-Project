@@ -12,13 +12,14 @@
 #ifndef WIFI_SECRETS_H
 #define WIFI_SECRETS_H
 
-#define WIFI_SSID     "your-network-name"
-#define WIFI_PASSWORD "your-network-password"
+#define WIFI_SSID     "your-hotspot-name"
+#define WIFI_PASSWORD "your-hotspot-password"
+
 
 /* Only used when built with MQTT=1 (also requires NET=lwip). */
-#define MQTT_BROKER_IP   "192.168.1.10"
+#define MQTT_BROKER_IP   "your-PC-IPv4-from-ipconfig"
 #define MQTT_BROKER_PORT 1883
-#define MQTT_CLIENT_ID   "mtk3smp-pico"
-#define MQTT_TOPIC       "mtk3smp-pico/heartbeat"
+#define MQTT_CLIENT_ID   "is22-pico"
+#define MQTT_TOPIC       "is22/heartbeat"
 
 #endif /* WIFI_SECRETS_H */
