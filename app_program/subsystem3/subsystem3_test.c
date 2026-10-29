@@ -7,6 +7,7 @@
 
 #include "subsystem3.h"
 #include "../test_report.h"
+#include "s3_check.h"
 
 #if APP_TEST
 
@@ -25,6 +26,9 @@ EXPORT void subsystem3_test(void)
 	APP_STATS	before, after;
 
 	TEST_INIT();
+
+    TEST_CHECK("S3-CORE", s3_check_run() == 0u,
+               "IR, bounded pulse capture and recovery regressions");
 
 	/* INT-01 (integration, IF-01): samples from subsystem 2 arrive.
 	   At one sample per 300 ms, 2 s should bring at least 5. */
