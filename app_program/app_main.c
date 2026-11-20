@@ -23,6 +23,9 @@
  *	  subsystem3/  Consumer  collects samples into statistics  (core 0)
  *	  subsystem4/  Monitor   prints reports, pauses/resumes the LED
  *	  subsystem5/  (empty template for the fifth student)
+ *	(IS22: these are now Telemetry, Motion Control, Line and Barcode,
+ *	IMU and Obstacle Scan, plus vehicle_ctrl/, the Vehicle Controller
+ *	that runs the system statechart.  See TEAM.md.)
  *
  *	How they talk to each other (the interfaces, see TEAM.md section 5):
  *	  IF-01  S2 -> S3  mailbox mbx_samples      (owned by S3)
@@ -107,7 +110,12 @@ EXPORT INT usermain(void)
 	tm_printf((UB*)"single-core build\n");
 #endif
 
-	/* Phase 1: every subsystem creates its kernel objects */
+	/* Phase 1: every subsystem creates its kernel objects.  The
+	   Vehicle Controller goes first: it owns queues the subsystems
+	   look for (obst_q, flg_sysfault). */
+#if VEHICLE_CONTROLLER
+	CHECK(vc_init(), "vc_init");
+#endif
 	CHECK(subsystem1_init(), "subsystem1_init");
 	CHECK(subsystem2_init(), "subsystem2_init");
 	CHECK(subsystem3_init(), "subsystem3_init");
@@ -120,6 +128,9 @@ EXPORT INT usermain(void)
 	CHECK(subsystem3_start(), "subsystem3_start");
 	CHECK(subsystem4_start(), "subsystem4_start");
 	CHECK(subsystem5_start(), "subsystem5_start");
+#if VEHICLE_CONTROLLER
+	CHECK(vc_start(), "vc_start");		/* last: it drives the others */
+#endif
 
 	tm_printf((UB*)"all subsystems started\n\n");
 
@@ -133,6 +144,9 @@ EXPORT INT usermain(void)
 	subsystem3_test();
 	subsystem4_test();
 	subsystem5_test();
+#if VEHICLE_CONTROLLER
+	vc_test();
+#endif
 	tm_printf((UB*)"[TEST] === test run end ===\n");
 #endif
 

@@ -66,7 +66,7 @@
 #endif
 #endif
 #ifndef SHARED_BITS_H
-#define ESTOP_IMU_IMPACT	(1u << 0)	/* IMU (Buddy 4): collision      */
+#define ESTOP_IMU_LIFTED	(1u << 0)	/* IMU (Buddy 4): lifted / overturned */
 #define ESTOP_IMU_FAULT		(1u << 1)	/* IMU (Buddy 4): IMU not working */
 #define ESTOP_OBSTACLE		(1u << 2)	/* Obstacle Scan (Buddy 5)       */
 #define FAULT_NO_ECHO		(1u << 3)	/* Obstacle Scan (Buddy 5)       */
@@ -108,10 +108,18 @@ IMPORT ID	obst_q;		/* S5 -> VC events    (VC's; stand-in)    */
 #define S5_ST_FAULT		7U	/* sensor fault                    */
 
 /* ---------------------------------------------------------------------
- *  obst_q events (S5 -> VC).  7 types -> 3 bits.
+ *  obst_q events (S5 -> VC).  8 types -> 3 bits, all used (12 Nov).
  * --------------------------------------------------------------------- */
+#define S5_EVT_LOOK		0U	/* answer to S5_BYP_LOOK_xxx: dist =
+					   cm the car's own width is free
+					   straight ahead (511 = nothing,
+					   0 = no reading), side = as asked  */
 #define S5_EVT_OBSTACLE		1U	/* OBSTACLE_DETECTED: flag 0 = slow,
-					   flag 1 = stopped (ESTOP bit set) */
+					   flag 1 = stopped (ESTOP bit set).
+					   Stopped while watching a bypass
+					   move: side = where it was seen
+					   (NONE = straight ahead, LEFT /
+					   RIGHT = at that front corner)     */
 #define S5_EVT_PATH_CLEAR	2U	/* nothing in the way any more      */
 #define S5_EVT_BYPASS_PLAN	3U	/* side, width, clearance, distance */
 #define S5_EVT_NO_PATH		4U	/* blocked; flag 1 = retry limit hit */
@@ -124,7 +132,7 @@ IMPORT ID	obst_q;		/* S5 -> VC events    (VC's; stand-in)    */
 #define S5_SIDE_RIGHT		2U
 
 /* ---------------------------------------------------------------------
- *  scan_q commands (VC -> S5).  6 commands -> 3 bits.
+ *  scan_q commands (VC -> S5).  7 commands -> 3 bits.
  * --------------------------------------------------------------------- */
 #define S5_CMD_STOP		1U	/* abort anything, back to PATROL  */
 #define S5_CMD_START_SCAN	2U	/* car is stopped: scan and plan   */
@@ -132,6 +140,41 @@ IMPORT ID	obst_q;		/* S5 -> VC events    (VC's; stand-in)    */
 #define S5_CMD_RESET		4U	/* clear a sensor fault            */
 #define S5_CMD_PATROL_OFF	5U	/* stop pinging (car idle, paused) */
 #define S5_CMD_PATROL_ON	6U	/* resume pinging (line following) */
+#define S5_CMD_BYPASS		7U	/* while the VC drives round an
+					   obstacle (12 Nov): arg S5_BYP_xxx */
+
+/* S5_CMD_BYPASS arg: what Obstacle Scan does during the VC's next move.
+   Taken in PATROL, DETECTED and BYPASS; the state is BYPASS afterwards.
+     QUIET        nothing (the car turns, or backs up)
+     WATCH        the car drives forward: ping straight ahead and towards
+                  both front corners in turn.  Something in the car's way
+                  -> ESTOP_OBSTACLE + OBSTACLE_DETECTED (flag 1), state
+                  DETECTED (START_SCAN scans from there)
+     WATCH_LEFT   the same, and keep extra room at the LEFT corner (the
+     WATCH_RIGHT  obstacle is on that side and the car will turn towards
+                  it to look)
+     LOOK_LEFT    the car stands: how far is its own width free straight
+     LOOK_RIGHT   ahead?  Measured ahead and towards that side.  Answer:
+                  S5_EVT_LOOK
+     TURN_LEFT    (15 Nov) the car turns towards that side (45 deg, to
+     TURN_RIGHT   look past the obstacle): ping at the servo's limit on
+                  that side; something within S5_TURN_CM -> stop as
+                  WATCH does (OBSTACLE_DETECTED flag 1, side = that side) */
+#define S5_BYP_QUIET		0U
+#define S5_BYP_WATCH		1U
+#define S5_BYP_WATCH_LEFT	2U
+#define S5_BYP_WATCH_RIGHT	3U
+#define S5_BYP_LOOK_LEFT	4U
+#define S5_BYP_LOOK_RIGHT	5U
+#define S5_BYP_TURN_LEFT	6U
+#define S5_BYP_TURN_RIGHT	7U
+/* (16 Nov) the car stands in the lane beside the obstacle: is it still
+   there?  The servo looks towards that side at 3 angles.  Answer:
+   S5_EVT_LOOK with flag 1, dist = cm sideways to the nearest thing seen
+   (511 nothing, 0 no reading), clear = cm ahead of the sensor the
+   furthest thing near the car on that side is */
+#define S5_BYP_SIDE_LEFT	8U
+#define S5_BYP_SIDE_RIGHT	9U
 
 /* ---------------------------------------------------------------------
  *  Obstacle Scan fault bits (S5 only; 8 bits).  Single writer: the
@@ -203,7 +246,7 @@ Inline void s5_obst_unpack(UW w, S5_OBST_MSG *m)
  *  scan_q word layout
  *    31..29 cmd     3   S5_CMD_xxx
  *    28..8  -      21   reserved, send 0
- *    7..0   arg     8   optional (e.g. bypass leg number)
+ *    7..0   arg     8   S5_CMD_BYPASS: S5_BYP_xxx; else 0
  * --------------------------------------------------------------------- */
 Inline UW s5_cmd_pack(UB cmd, UB arg)
 {
@@ -430,8 +473,16 @@ IMPORT INT servo_settle_ms(W delta_deg);
 #define S5_OBJECT_CM		35	/* nearer than this = in the way    */
 #define S5_JUMP_CM		10	/* bigger step between slots = edge  */
 #define S5_BEAM_CORR_DEG	7	/* half beam width: edges read wide  */
-#define S5_DEPTH_CM		40	/* side objects deeper than obstacle
-					   + this do not block the bypass    */
+#define S5_DEPTH_CM		15	/* side objects deeper than obstacle
+					   + this do not block the bypass.
+					   12 Nov: 40 -> 15.  40 was for the
+					   fixed route (it drove 45 cm past
+					   blind).  Now the car feels its way
+					   (vc_bypass.c): what is further back
+					   is found, and gone round, when it
+					   gets there, so a part sticking out
+					   further back no longer means "no
+					   way round"                        */
 #define S5_MIN_CLEAR_CM		25	/* car needs this much room to pass  */
 #define S5_CLEAR_OPEN_CM	400	/* "nothing there" on a side         */
 

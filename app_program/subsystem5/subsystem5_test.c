@@ -37,10 +37,10 @@ LOCAL void race_task(INT stacd, void *exinf)
 
 	(void)stacd; (void)exinf;
 	for (i = 0; i < RACE_LOOPS; i++) {
-		(void)tk_set_flg(race_flg, ESTOP_IMU_IMPACT);
-		(void)tk_clr_flg(race_flg, ~ESTOP_IMU_IMPACT);
+		(void)tk_set_flg(race_flg, ESTOP_IMU_LIFTED);
+		(void)tk_clr_flg(race_flg, ~ESTOP_IMU_LIFTED);
 	}
-	(void)tk_set_flg(race_flg, ESTOP_IMU_IMPACT);	/* leave it set */
+	(void)tk_set_flg(race_flg, ESTOP_IMU_LIFTED);	/* leave it set */
 	(void)tk_set_flg(race_done, 1U);
 	tk_ext_tsk();
 }
@@ -143,6 +143,30 @@ EXPORT void subsystem5_test(void)
 			   "plan: side past the servo limit counts as no room");
 	}
 
+	/* S5-U21 planner, room on both sides (19 Nov): a 10 cm box 20 cm
+	   ahead standing left of the car's path goes RIGHT, the same box
+	   standing right of it goes LEFT (was LEFT both times) */
+	{
+		static const W box_left[] = {
+			-45, 511, -40, 511, -35, 511, -30, 511, -25, 511, -20, 511, -15, 511,
+			-10, 20, -5, 20, 0, 20, 5, 20, 10, 20, 15, 20, 20, 21, 25, 22, 30, 511,
+		};
+		static const W box_right[] = {
+			-45, 511, -40, 511, -35, 511, -30, 511, -25, 22, -20, 21, -15, 20,
+			-10, 20, -5, 20, 0, 20, 5, 20, 10, 20, 15, 511, 20, 511, 25, 511, 30, 511,
+		};
+		S5_PLAN p2;
+
+		t_scan(&s, box_left, (INT)(sizeof(box_left) / sizeof(box_left[0]) / 2U));
+		s5_plan(&s, &p);
+		t_scan(&s, box_right, (INT)(sizeof(box_right) / sizeof(box_right[0]) / 2U));
+		s5_plan(&s, &p2);
+		TEST_CHECK("S5-U21",
+			   (p.result == S5_PLAN_BYPASS) && (p.side == S5_SIDE_RIGHT) &&
+			   (p2.result == S5_PLAN_BYPASS) && (p2.side == S5_SIDE_LEFT),
+			   "plan: room both sides -> round the nearer edge");
+	}
+
 	/* S5-U06 storage budget (Tribunal 1: ~240 -> 60 bytes) */
 	tm_printf((UB*)"[TEST] S5-U06 info: scan table %d B, plan %d B, obst msg 4 B, cmd 4 B\n",
 		  (INT)sizeof(S5_SCAN), (INT)sizeof(S5_PLAN));
@@ -171,7 +195,7 @@ EXPORT void subsystem5_test(void)
 			T_RFLG r;
 			(void)tk_ref_flg(race_flg, &r);
 			TEST_CHECK("S5-U07", (tid > 0) &&
-				   (r.flgptn == (ESTOP_OBSTACLE | ESTOP_IMU_IMPACT)),
+				   (r.flgptn == (ESTOP_OBSTACLE | ESTOP_IMU_LIFTED)),
 				   "ESTOP bits: 2x2000 concurrent set/clear, no lost update");
 		}
 		(void)tk_del_flg(race_flg);

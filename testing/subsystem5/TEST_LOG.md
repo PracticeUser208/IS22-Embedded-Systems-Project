@@ -30,6 +30,7 @@ Define a test here before running it. Test IDs never change.
 | S5-U18 | Scans with motors running | A10 | manual | Repeat S5-U14 with the wheels spinning | no resets; width / side as in S5-U14 |
 | S5-U19 | Planner with the servo's safe travel (+30 .. −45): a side the sensor cannot reach counts as no room | FR17, servo limits (sensor hits the board past them) | auto | `subsystem5_test.c` | wall on the right → NO_PATH; right open → RIGHT; PASS |
 | S5-U20 | Servo limits | servo limits in `drv_servo.h` | manual | `us_servo_bringup_v3`: step with l / r (or a / d) until the sensor touches the board; the last angle before that is the limit; copy into `SERVO_LIMIT_LEFT_DEG` / `SERVO_LIMIT_RIGHT_DEG`. Re-run if the mounting changes | sensor never touches the board. Measured 25 Oct: +30° left, −45° right (knocked off at +45° and −60°) |
+| S5-U21 | Planner, room on both sides (19 Nov): goes round the edge the obstacle reaches out less to | FR17 | auto | `subsystem5_test.c` | 10 cm box 20 cm ahead, left of the path → RIGHT; right of the path → LEFT; PASS |
 
 *Method:* **auto** = `TEST_CHECK` in code, result printed on the console;
 **manual** = a person observes the result (LED, scope, meter, phone app…).

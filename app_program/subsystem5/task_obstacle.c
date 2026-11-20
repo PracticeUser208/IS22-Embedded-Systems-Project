@@ -14,8 +14,26 @@
  *	  FINE      5 deg steps across the obstacle and its edges, 1 ping each
  *	  PLAN      width, room each side, pick the side: BYPASS_PLAN, or
  *	            NO_PATH if neither side has room, or PATH_CLEAR   FR16, FR17
- *	  BYPASS    the VC drives round.  On MOVE_DONE, look ahead: clear ->
- *	            BYPASS_COMPLETE; still in the way -> rescan         FR18
+ *	  BYPASS    the VC drives round, one move at a time, and says what
+ *	            to do meanwhile (S5_CMD_BYPASS, 12 Nov):
+ *	              WATCH     the car drives forward: ping straight ahead,
+ *	                        at the left front corner, ahead, at the right
+ *	                        one, and so on.  Something in the car's way
+ *	                        -> ESTOP_OBSTACLE, OBSTACLE_DETECTED (flag 1)
+ *	                        and DETECTED: the VC asks for a new scan from
+ *	                        there, or goes another way
+ *	              TURN      the car turns 45 deg towards the obstacle's
+ *	                        side to look past it (15 Nov): ping at the
+ *	                        servo's limit on that side; that near twice
+ *	                        -> stop the turn as WATCH does
+ *	              LOOK      the car stands, facing where it wants to go:
+ *	                        how far is its own width free? -> LOOK
+ *	              QUIET     the car turns away or backs up: nothing
+ *	            The VC ends it with STOP once the car is back on the line.
+ *	            (Before 12 Nov the scan was only at the start and the
+ *	            bypass was driven blind.)  Still here for the bench stub:
+ *	            on MOVE_DONE, look ahead: clear -> BYPASS_COMPLETE; still
+ *	            in the way -> rescan                                FR18
  *	            "Obstacle passed" (undefined in Week 6, review feedback)
  *	            = nothing nearer than S5_OBJECT_CM straight ahead.
  *	  BLOCKED   no room either side: the VC backs up and sends START_SCAN
@@ -60,6 +78,34 @@
 #define S5_FAIL_LIMIT		3	/* bad pings in a row = sensor fault  */
 #define S5_LATE_LIMIT		5	/* late pings in a row = warning      */
 #define S5_COARSE_PINGS		3	/* median of 3 at each coarse angle   */
+/* Watching a bypass move (S5_BYP_WATCH).  The corner angles see what
+   the straight-ahead beam misses at the car's own width: at 30 deg,
+   17 cm away is 8.5 cm to the side = the car's edge.  On the obstacle's
+   side (WATCH_LEFT / _RIGHT) 25 cm = 12.5 cm to the side (17.7 cm at the
+   beam's edge, 45 deg): the car needs that room to turn 45 deg towards
+   the obstacle and look (its front corner swings 6 cm out).
+   15 Nov: 30 -> 25 cm.  The car now passes closer (VC_BYPASS_MARGIN_MM
+   140 -> 120) and 30 cm stopped it at the obstacle's front corner; the
+   turn itself is watched now (S5_TURN_CM).
+   Turning towards the obstacle (S5_BYP_TURN_xxx): ping at the servo's
+   limit on that side, about once a degree (60 ms at 18 deg/s).  Once
+   the car has turned 15-30 deg the beam meets the obstacle's side
+   nearly square on, where a flat face echoes; within S5_TURN_CM the
+   car's front corner would reach it before the 45 deg: stop.  In the
+   PC simulation (vc_bypass_check.c) this took the touches from 49 to 6
+   in 5,376 runs with the car passing 7 cm closer. */
+#define S5_GUARD_DEG		30	/* the corner angles, +- (in the servo's
+					   safe travel, subsystem5.h)         */
+#define S5_GUARD_CM		17	/* stop: this near at a corner angle  */
+#define S5_GUARD_IN_CM		25	/* ... at the obstacle's corner       */
+#define S5_TURN_CM		20	/* turning towards the obstacle: stop */
+#define S5_LOOK_HALF_CM		13	/* LOOK: the car's half width + room:
+					   only what is this near the middle
+					   of its path counts                 */
+#define S5_SIDE_AHEAD_CM	60	/* side check: only what is this near
+					   ahead counts ...                   */
+#define S5_SIDE_NEAR_CM		35	/* ... and for how far ahead it reaches,
+					   only what is this near sideways    */
 #define S5_DEBUG		1	/* 1: print state changes and scans   */
 
 /* ---- State, single writer (this task) ---- */
@@ -73,6 +119,9 @@ LOCAL UB	s5_cnt_stop;		/* consecutive stop pings  */
 LOCAL UB	s5_cnt_late;		/* consecutive late pings  */
 LOCAL UB	s5_cnt_good;		/* consecutive good pings while faulty */
 LOCAL BOOL	s5_slow_sent;
+LOCAL UB	s5_guard;		/* S5_BYP_QUIET / WATCH / WATCH_LEFT /
+					   WATCH_RIGHT, in BYPASS             */
+LOCAL UB	s5_guard_i;		/* where in ahead-left-ahead-right    */
 LOCAL UW	s5_next_ms;		/* when the next ping is due */
 LOCAL S5_SCAN	s5_scan;		/* 50 bytes */
 LOCAL S5_PLAN	s5_plan_out;
@@ -84,7 +133,7 @@ LOCAL const char *const s5_state_names[8] = {
 	"PATROL", "DETECTED", "COARSE", "FINE", "PLAN", "BYPASS", "BLOCKED", "FAULT"
 };
 LOCAL const char *const s5_event_names[8] = {
-	"-", "OBSTACLE_DETECTED", "PATH_CLEAR", "BYPASS_PLAN",
+	"LOOK", "OBSTACLE_DETECTED", "PATH_CLEAR", "BYPASS_PLAN",
 	"NO_PATH", "BYPASS_COMPLETE", "SENSOR_FAULT", "FAULT_CLEARED"
 };
 
@@ -194,6 +243,7 @@ LOCAL void s5_aim(W deg, INT min_wait_ms);
 
 LOCAL void s5_enter_fault(void)
 {
+	s5_guard = S5_BYP_QUIET;
 	s5_estop_set();					/* cannot see: stop */
 	(void)tk_set_flg(flg_sysfault, SYSFAULT_OBSTACLE);
 	s5_cnt_good = 0U;
@@ -290,6 +340,7 @@ LOCAL void s5_print_scan(void)
 
 LOCAL void s5_go_patrol(void)
 {
+	s5_guard = S5_BYP_QUIET;
 	s5_retries = 0U;
 	s5_cnt_stop = 0U;
 	s5_slow_sent = FALSE;
@@ -306,6 +357,7 @@ LOCAL void s5_run_scan(void)
 	W deg, from, to;
 	UB flag;
 
+	s5_guard = S5_BYP_QUIET;
 	s5_scan_clear(&s5_scan);
 
 	/* Coarse: the 30-degree angles inside the servo's safe travel, plus
@@ -467,6 +519,205 @@ LOCAL void s5_fault_ping(void)
 	s5_publish();
 }
 
+/* ---------------------------------------------------------------------
+ *  While the VC drives round an obstacle (S5_CMD_BYPASS, 12 Nov)
+ * --------------------------------------------------------------------- */
+/* WATCH: one ping, at the next angle of ahead / left corner / ahead /
+   right corner.  TURN: at the servo's limit on that side.  Too near
+   twice in a row at that angle: stop the car. */
+LOCAL void s5_guard_ping(void)
+{
+	static const B degs[4] = { 0, S5_GUARD_DEG, 0, -S5_GUARD_DEG };
+	W	deg = degs[s5_guard_i & 3U];
+	BOOL	inner = (((deg > 0) && (s5_guard == S5_BYP_WATCH_LEFT)) ||
+			 ((deg < 0) && (s5_guard == S5_BYP_WATCH_RIGHT))) ? TRUE : FALSE;
+	UH	lim = (deg == 0) ? (UH)S5_STOP_CM
+				 : ((inner != FALSE) ? (UH)S5_GUARD_IN_CM : (UH)S5_GUARD_CM);
+	UH	cm;
+
+	if ((s5_guard == S5_BYP_TURN_LEFT) || (s5_guard == S5_BYP_TURN_RIGHT)) {
+		deg = (s5_guard == S5_BYP_TURN_LEFT) ? (W)SERVO_LIMIT_LEFT_DEG
+						     : (W)SERVO_LIMIT_RIGHT_DEG;
+		lim = (UH)S5_TURN_CM;
+	}
+
+	s5_aim(deg, 0);
+	cm = s5_measure(1);
+	if ((s5_faults & S5_FLT_STOP_MASK) != 0U) { s5_enter_fault(); return; }
+	if ((deg == 0) && (cm != S5_CM_NONE)) {
+		s5_last_cm = cm;
+	}
+	if ((cm != S5_CM_NONE) && (cm != S5_CM_OPEN) && (cm <= lim)) {
+		(void)tk_dly_tsk(S5_PING_MS);		/* once more, to be sure */
+		cm = s5_measure(1);
+		if ((s5_faults & S5_FLT_STOP_MASK) != 0U) { s5_enter_fault(); return; }
+		if ((cm != S5_CM_NONE) && (cm != S5_CM_OPEN) && (cm <= lim)) {
+			s5_guard = S5_BYP_QUIET;
+			s5_estop_set();				/* fast path */
+			if (deg == 0) {
+				s5_last_cm = cm;
+			}
+			s5_send(S5_EVT_OBSTACLE,
+				(deg > 0) ? S5_SIDE_LEFT : ((deg < 0) ? S5_SIDE_RIGHT : S5_SIDE_NONE),
+				1U, cm, 0U, 0U);
+			s5_cnt_stop = 0U;
+			s5_set_state(S5_ST_DETECTED);
+			s5_aim(0, 0);
+			return;
+		}
+	}
+	s5_guard_i++;
+	s5_next_ms = s5_now_ms() + S5_PING_MS;
+	s5_publish();
+}
+
+/* LOOK: the car stands and faces where it wants to drive.  How far is
+   its own width free?  Measured straight ahead and at two angles
+   towards 'side'; a reading counts if it is within S5_LOOK_HALF_CM of
+   the middle of the car's path, as its distance along the path. */
+LOCAL void s5_look(UB side)
+{
+	static const B left[3]  = { 0, 15, 30 };
+	static const B right[3] = { 0, -20, -40 };
+	const B	*degs = (side == S5_SIDE_LEFT) ? left : right;
+	UH	best = S5_CM_OPEN;
+	BOOL	any = FALSE;
+	INT	i;
+
+	s5_guard = S5_BYP_QUIET;
+	for (i = 0; i < 3; i++) {
+		W	deg = degs[i];
+		UH	cm;
+
+		if (servo_deg_ok(deg) == FALSE) {
+			continue;
+		}
+		s5_aim(deg, S5_PING_MS);
+		cm = s5_measure(S5_COARSE_PINGS);
+		if ((s5_faults & S5_FLT_STOP_MASK) != 0U) { s5_enter_fault(); return; }
+		if (s5_stop_requested() != FALSE) { s5_go_patrol(); return; }
+		if (cm == S5_CM_NONE) {
+			continue;
+		}
+		any = TRUE;
+		if (deg == 0) {
+			s5_last_cm = cm;
+		}
+		if (cm != S5_CM_OPEN) {
+			W a = (deg < 0) ? -deg : deg;
+			W across = ((W)cm * s5_sin_q12(a)) / 4096;
+			W along  = ((W)cm * s5_sin_q12(90 - a)) / 4096;
+
+			if ((across <= S5_LOOK_HALF_CM) && (along < (W)best)) {
+				best = (UH)along;
+			}
+		}
+	}
+	s5_aim(0, 0);
+#if S5_DEBUG
+	tm_printf((UB*)"S5 look %s: %d cm free\n", (side == S5_SIDE_LEFT) ? "left" : "right",
+		  (any != FALSE) ? (INT)best : 0);
+#endif
+	s5_send(S5_EVT_LOOK, side, 0U, (any != FALSE) ? best : S5_CM_NONE, 0U, 0U);
+	s5_publish();
+}
+
+/* SIDE (16 Nov): the car stands in the lane beside the obstacle.  Is
+   it still beside / ahead on that side?  3 angles towards 'side'; of the
+   readings within S5_SIDE_AHEAD_CM ahead: how far sideways the nearest
+   is, and how far ahead the furthest one within S5_SIDE_NEAR_CM sideways
+   is. */
+LOCAL void s5_side(UB side)
+{
+	static const B left[3]  = { 30, 20, 10 };
+	static const B right[3] = { -45, -30, -15 };
+	const B	*degs = (side == S5_SIDE_LEFT) ? left : right;
+	UH	best = S5_CM_OPEN;
+	UH	far = 0U;
+	BOOL	any = FALSE;
+	INT	i;
+
+	s5_guard = S5_BYP_QUIET;
+	for (i = 0; i < 3; i++) {
+		W	deg = degs[i];
+		UH	cm;
+
+		if (servo_deg_ok(deg) == FALSE) {
+			continue;
+		}
+		s5_aim(deg, S5_PING_MS);
+		cm = s5_measure(S5_COARSE_PINGS);
+		if ((s5_faults & S5_FLT_STOP_MASK) != 0U) { s5_enter_fault(); return; }
+		if (s5_stop_requested() != FALSE) { s5_go_patrol(); return; }
+		if (cm == S5_CM_NONE) {
+			continue;
+		}
+		any = TRUE;
+		if (cm != S5_CM_OPEN) {
+			W a = (deg < 0) ? -deg : deg;
+			W across = ((W)cm * s5_sin_q12(a)) / 4096;
+			W along  = ((W)cm * s5_sin_q12(90 - a)) / 4096;
+
+			if (along <= S5_SIDE_AHEAD_CM) {
+				if (across < (W)best) {
+					best = (UH)across;
+				}
+				if ((across <= S5_SIDE_NEAR_CM) && (along > (W)far)) {
+					far = (UH)along;
+				}
+			}
+		}
+	}
+	s5_aim(0, 0);
+#if S5_DEBUG
+	tm_printf((UB*)"S5 side check %s: nearest %d cm sideways, reaches %d cm ahead\n",
+		  (side == S5_SIDE_LEFT) ? "left" : "right", (any != FALSE) ? (INT)best : 0, (INT)far);
+#endif
+	s5_send(S5_EVT_LOOK, side, 1U, (any != FALSE) ? best : S5_CM_NONE, 0U, far);
+	s5_publish();
+}
+
+LOCAL void s5_bypass_cmd(UB arg)
+{
+	if ((s5_state != S5_ST_PATROL) && (s5_state != S5_ST_DETECTED) &&
+	    (s5_state != S5_ST_BYPASS)) {
+		return;			/* scanning, blocked or faulty: not now */
+	}
+	s5_cnt_stop = 0U;
+	s5_slow_sent = FALSE;
+	if (s5_state != S5_ST_BYPASS) {
+		s5_set_state(S5_ST_BYPASS);
+	}
+	switch (arg) {
+	case S5_BYP_WATCH:
+	case S5_BYP_WATCH_LEFT:
+	case S5_BYP_WATCH_RIGHT:
+	case S5_BYP_TURN_LEFT:
+	case S5_BYP_TURN_RIGHT:
+		s5_guard   = arg;
+		s5_guard_i = 0U;			/* straight ahead first */
+		s5_next_ms = s5_now_ms();
+		break;
+	case S5_BYP_LOOK_LEFT:
+		s5_look(S5_SIDE_LEFT);
+		break;
+	case S5_BYP_LOOK_RIGHT:
+		s5_look(S5_SIDE_RIGHT);
+		break;
+	case S5_BYP_SIDE_LEFT:
+		s5_side(S5_SIDE_LEFT);
+		break;
+	case S5_BYP_SIDE_RIGHT:
+		s5_side(S5_SIDE_RIGHT);
+		break;
+	default:					/* QUIET */
+		s5_guard = S5_BYP_QUIET;
+		s5_aim(0, 0);
+		break;
+	}
+	s5_publish();
+}
+
 LOCAL void s5_after_move(void)	/* MOVE_DONE while bypassing */
 {
 	UH cm;
@@ -509,7 +760,10 @@ LOCAL void s5_handle_cmd(UW w)
 		}
 		break;
 	case S5_CMD_START_SCAN:
-		if ((s5_state == S5_ST_DETECTED) || (s5_state == S5_ST_PATROL)) {
+		if ((s5_state == S5_ST_DETECTED) || (s5_state == S5_ST_PATROL) ||
+		    (s5_state == S5_ST_BYPASS)) {
+			/* BYPASS (12 Nov): the watch stopped the car in the lane and
+			   the VC wants a new plan from where it stands */
 			s5_retries = 0U;
 			s5_run_scan();
 		} else if (s5_state == S5_ST_BLOCKED) {
@@ -520,11 +774,12 @@ LOCAL void s5_handle_cmd(UW w)
 				s5_run_scan();
 			}
 		} else {
-			/* scanning, bypassing or faulty: ignore */
+			/* scanning or faulty: ignore */
 		}
 		break;
 	case S5_CMD_MOVE_DONE:
 		if (s5_state == S5_ST_BYPASS) {
+			s5_guard = S5_BYP_QUIET;
 			s5_after_move();
 		}
 		break;
@@ -556,6 +811,9 @@ LOCAL void s5_handle_cmd(UW w)
 		s5_pinging = TRUE;
 		s5_next_ms = s5_now_ms();
 		s5_publish();
+		break;
+	case S5_CMD_BYPASS:
+		s5_bypass_cmd(s5_arg_of(w));
 		break;
 	default:
 		break;
@@ -604,6 +862,7 @@ EXPORT void s5_scan_task(INT stacd, void *exinf)
 		INT	n;
 
 		if (((s5_state == S5_ST_PATROL) && (s5_pinging != FALSE)) ||
+		    ((s5_state == S5_ST_BYPASS) && (s5_guard != S5_BYP_QUIET)) ||
 		    (s5_state == S5_ST_FAULT)) {
 			W left = (W)(s5_next_ms - s5_now_ms());
 			tmo = (left > 0) ? (TMO)left : 0;
@@ -615,6 +874,8 @@ EXPORT void s5_scan_task(INT stacd, void *exinf)
 		} else if (n == E_TMOUT) {
 			if (s5_state == S5_ST_PATROL) {
 				s5_patrol_ping();
+			} else if (s5_state == S5_ST_BYPASS) {
+				s5_guard_ping();
 			} else if (s5_state == S5_ST_FAULT) {
 				s5_fault_ping();
 			} else {

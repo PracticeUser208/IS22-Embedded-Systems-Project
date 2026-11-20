@@ -580,7 +580,8 @@ EXPORT INT servo_settle_ms(W delta_deg)
  *	   Nothing measured beyond the edge (the obstacle runs off the scan,
  *	   or past the servo's safe travel) = unknown, so 0.
  *	5. Take the side with more room if it is at least S5_MIN_CLEAR_CM,
- *	   else BLOCKED.  A tie goes left.
+ *	   else BLOCKED.  19 Nov: if both sides have that much, the side the
+ *	   obstacle reaches out less to (a tie goes left).
  *	All integer maths (the M0+ has no FPU).
  */
 
@@ -822,6 +823,14 @@ EXPORT void s5_plan(const S5_SCAN *s, S5_PLAN *p)
 	    (p->clear_right_cm < (UH)S5_MIN_CLEAR_CM)) {
 		p->result = S5_PLAN_BLOCKED;
 		p->side = S5_SIDE_NONE;
+	} else if ((p->clear_left_cm >= (UH)S5_MIN_CLEAR_CM) &&
+		   (p->clear_right_cm >= (UH)S5_MIN_CLEAR_CM)) {
+		/* 19 Nov: room on both sides: the side the obstacle reaches
+		   out less to, so the car goes round its nearer edge (was the
+		   side with more room, and left when both were open: it went
+		   left round an obstacle standing left of the car's path) */
+		p->result = S5_PLAN_BYPASS;
+		p->side = (x_left <= -x_right) ? S5_SIDE_LEFT : S5_SIDE_RIGHT;
 	} else {
 		p->result = S5_PLAN_BYPASS;
 		p->side = (p->clear_left_cm >= p->clear_right_cm) ? S5_SIDE_LEFT
