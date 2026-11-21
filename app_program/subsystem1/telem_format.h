@@ -43,6 +43,49 @@
 #define TF_TOPIC_HB             "is22/hb"     /* heartbeat,  car -> PC */
 #define TF_TOPIC_ACK            "is22/ack"    /* command ACK, car -> PC */
 #define TF_TOPIC_CMD            "is22/cmd"    /* command,    PC -> car */
+#define TF_TOPIC_BC             "is22/bc"     /* barcode read, car -> PC */
+#define TF_TOPIC_IR             "is22/ir"     /* side sensor trace, car -> PC */
+
+/* is22/ir payload (3 Nov, debugging the barcode reading): the side
+ * sensor's raw ADC at every line-task sample (10 ms), 2 messages a second.
+ *   byte 0      line state: 0 standing, 1 following, 2 other
+ *   byte 1      sequence number (+1 per message)
+ *   byte 2      calibrated white / 16 (0 = not calibrated)
+ *   byte 3      calibrated black / 16
+ *   bytes 4..   TF_IR_TRACE_N samples, raw / 16 (0..255), oldest first */
+#define TF_IR_TRACE_N           50u
+#define TF_IR_HDR_LEN           4u
+#define TF_IR_LEN               (TF_IR_HDR_LEN + TF_IR_TRACE_N)
+
+/* is22/bc payload: one message per barcode read (or failed read).  Not
+ * bit-packed; the telemetry frame is unchanged.
+ *   byte 0      barcode_t the car made of it (NONE = not read)
+ *   byte 1      bit 0: the car was standing (pushed by hand: not acted on)
+ *               bit 1: reading abandoned (a bar or space too long, ...)
+ *               bit 2: read on the second look (bc_rec.c: the recording
+ *                      classified again with the final calibration)
+ *               bit 3: bytes 7-14 hold the side sensor's levels (always
+ *                      set since 3 Nov)
+ *               bit 4: unused (was the bar-shape reader, removed 8 Nov)
+ *               bit 5: the side sensor dropped out during it (loose
+ *                      wire, 4 Nov)
+ *   byte 2      how many bars + spaces were read
+ *   bytes 3-6   the characters between the '*'s, NUL-padded ("" = none)
+ *   bytes 7-14  side sensor raw ADC, 4 x uint16 little-endian: lightest
+ *               and darkest in the recording (paper, bars), and its
+ *               calibrated white and black (usually the black tape)
+ *   bytes 15..  each bar/space width in 10 ms units, 255 = 2.55 s or more;
+ *               the first is the first bar the sensor met (at most
+ *               TF_BC_WIDTHS_MAX)                                      */
+#define TF_BC_HDR_LEN           15u
+#define TF_BC_TEXT_LEN          4u
+#define TF_BC_WIDTHS_MAX        59u
+#define TF_BC_LEN_MAX           (TF_BC_HDR_LEN + TF_BC_WIDTHS_MAX)
+#define TF_BC_STANDING          0x01u
+#define TF_BC_ABANDONED         0x02u
+#define TF_BC_REREAD            0x04u
+#define TF_BC_LEVELS            0x08u
+#define TF_BC_DROPOUTS          0x20u
 
 /* ===================================================================
  *  Enumerations. Each ends with *_COUNT so the asserts can check widths.
@@ -105,7 +148,11 @@ typedef enum
     MOTION_TURNING,
     MOTION_CLIMBING_HUMP,
     MOTION_DESCENDING_HUMP,
-    MOTION_IMPACT,
+    MOTION_LIFTED,          /* 16 Nov: was MOTION_IMPACT (same value, 5): the car
+                               was lifted or overturned */
+    MOTION_STEADY,          /* added for Buddy 4's motion classes (moving at a
+                               steady speed). Appended: values 0..5 and the field
+                               width are unchanged, so v2 frames decode as before */
     MOTION_COUNT
 } motion_t;
 
@@ -161,20 +208,12 @@ typedef enum
 
 /* ===================================================================
  *  Bit masks: one bit per condition (Change Requirement: "individual
- *  bits within a shared fault bitmask"). TBC with VC owner / Buddy 4.
+ *  bits within a shared fault bitmask").  FAULT_xxx and ESTOP_xxx now
+ *  come from the team's shared header, so telemetry, Motion Control,
+ *  the IMU and Obstacle Scan all use the same values.  Same bits as
+ *  before.  Still plain #defines: the PC tests build unchanged.
  * =================================================================== */
-#define FAULT_MOTOR_STALL       (1u << 0)
-#define FAULT_ENCODER           (1u << 1)
-#define FAULT_IMU               (1u << 2)
-#define FAULT_NO_ECHO           (1u << 3)
-#define FAULT_WIFI_LOSS         (1u << 4)
-#define FAULT_LINE_LOST         (1u << 5)
-#define FAULT_NO_PATH           (1u << 6)
-#define FAULT_STARTUP           (1u << 7)
-
-#define ESTOP_IMU_IMPACT        (1u << 0)
-#define ESTOP_IMU_FAULT         (1u << 1)
-#define ESTOP_OBSTACLE          (1u << 2)
+#include "../shared_bits.h"
 
 /* ===================================================================
  *  Field widths (bits) and ranges. TBC = provisional.

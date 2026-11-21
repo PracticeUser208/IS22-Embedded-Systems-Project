@@ -25,7 +25,10 @@
 /* Topic IDs inside mbf_s1_tx (1st byte of each queued message) */
 #define S1_TX_ID_TM		0u
 #define S1_TX_ID_HB		1u
-#define S1_TX_MSG_MAX		(1u + TF_TM_LEN)	/* id + largest frame */
+#define S1_TX_ID_BC		2u	/* barcode read (TF_TOPIC_BC)      */
+#define S1_TX_ID_IR		3u	/* side sensor trace (TF_TOPIC_IR) */
+#define S1_TX_MSG_MAX		(1u + ((TF_TM_LEN > TF_BC_LEN_MAX) ? \
+				       TF_TM_LEN : TF_BC_LEN_MAX))	/* id + largest */
 
 /* ---- Called by mqtt_utk.c (WiFi service task) ----------------------- */
 
