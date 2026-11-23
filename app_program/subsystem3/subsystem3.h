@@ -456,10 +456,10 @@ IMPORT void	consumer_task(INT stacd, void *exinf);
 #ifndef BARCODE_MAP_H
 #define BARCODE_MAP_H
 
-#define BARCODE_LEFT_LETTERS		"A"
-#define BARCODE_RIGHT_LETTERS		"B"
-#define BARCODE_STRAIGHT_LETTERS	"C"
-#define BARCODE_UTURN_LETTERS		"DEK"
+#define BARCODE_LEFT_LETTERS		"W"
+#define BARCODE_RIGHT_LETTERS		"X"
+#define BARCODE_STRAIGHT_LETTERS	"Y"
+#define BARCODE_UTURN_LETTERS		"Z"
 
 #endif /* BARCODE_MAP_H */
 

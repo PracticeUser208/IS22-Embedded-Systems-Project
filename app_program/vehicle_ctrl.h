@@ -238,7 +238,7 @@
 					   line sensors see the new line (90 /
 					   180 deg, more if the axle is off the
 					   middle)                            */
-#define VC_JCT_FORGET_MM	1500	/* a barcode's command is dropped if no
+#define VC_JCT_FORGET_MM	10000	/* (23 Nov: was 1500) a barcode's command is dropped if no
 					   junction comes within this         */
 
 /* Bench option: 0 = wait for an MQTT START (Week 6 design).  N > 0 =
