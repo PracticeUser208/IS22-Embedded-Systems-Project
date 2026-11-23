@@ -1,9 +1,5 @@
 # Team and subsystems
 
-Filled in for the IS22 robot car (Raspberry Pi Pico W + Robo Pico) from the
-code on GitHub `main`, 23 Nov 2026. The template's example code is switched off
-(`TEMPLATE_DEMO 0`, `S1_SIM_VC 0`, `S5_STUB_VC 0`); only its LED task still runs.
-
 Fill this in at the start of the project and keep it up to date. It is the
 single place that says **who owns what**, so that five people can work in
 one firmware image without clashing over pins, priorities, or kernel objects.
@@ -23,7 +19,7 @@ subsystem, ask its owner or open a pull request for them to review.
 | 3 | Line and Barcode: IR line following, barcode decoding, line search | 2502978 | ashwinkkkk | `app_program/subsystem3/` | `testing/subsystem3/` |
 | 4 | IMU and Terrain: hump detection and height, motion state, lifted / overturned | 2503710 | PracticeUser208 | `app_program/subsystem4/` | `testing/subsystem4/` |
 | 5 | Obstacle Scan: ultrasonic sensor, scan servo, obstacle profiling, bypass side | 2501748 | ReubenjHoh | `app_program/subsystem5/` | `testing/subsystem5/` |
-| VC | Vehicle Controller: system state machine, runs the other subsystems, builds telemetry, acts on commands | whole team | — | `app_program/vehicle_ctrl.c`, `task_vc.c`, `vehicle_ctrl.h`, `vc_imu_msg.h` | `testing/vehicle_ctrl/`, `testing/system/` |
+| VC | Vehicle Controller: system state machine, runs the other subsystems, builds telemetry, acts on commands | whole team | - | `app_program/vehicle_ctrl.c`, `task_vc.c`, `vehicle_ctrl.h`, `vc_imu_msg.h` | `testing/vehicle_ctrl/`, `testing/system/` |
 
 Shared files (`app_program/app_main.c`, `app_program/app.h`, this file)
 are changed only by agreement of the team. The exception is claiming an empty
@@ -52,30 +48,30 @@ fixed.
 | GP23, GP24, GP25, GP29 | *reserved* | Pico W radio |
 | GP0 | *crash report* | UART0 TX, only in a `CRASH_REPORT=1` build; otherwise free |
 | GP1 | *crash report* | UART0 RX, only in a `CRASH_REPORT=1` build; otherwise free |
-| GP2 | S4 | IMU I2C1 SDA (Maker / Grove 2 port) — Week 6 pin map |
-| GP3 | S4 | IMU I2C1 SCL (Maker / Grove 2 port) — Week 6 pin map |
+| GP2 | S4 | IMU I2C1 SDA (Maker / Grove 2 port) - Week 6 pin map |
+| GP3 | S4 | IMU I2C1 SCL (Maker / Grove 2 port) - Week 6 pin map |
 | GP4 | S5 | HC-SR04+ TRIG (Grove 3) |
 | GP5 | S5 | HC-SR04+ ECHO (Grove 3, 3V3 sensor, no divider; edge interrupt) |
-| GP6 | — | free |
-| GP7 | — | free |
+| GP6 | - | free |
+| GP7 | - | free |
 | GP8 | S2 | left motor M1A (on-board driver, PWM slice 4A) |
 | GP9 | S2 | left motor M1B (PWM slice 4B) |
 | GP10 | S2 | right motor M2A (PWM slice 5A) |
 | GP11 | S2 | right motor M2B (PWM slice 5B) |
 | GP12 | S5 | scan servo signal (servo port S1, PWM slice 6A, 50 Hz) |
-| GP13 | — | free |
-| GP14 | — | free |
-| GP15 | — | free |
+| GP13 | - | free |
+| GP14 | - | free |
+| GP15 | - | free |
 | GP16 | S2 | left wheel encoder (Grove 4, rising-edge interrupt) |
 | GP17 | S2 | right wheel encoder (Grove 4, rising-edge interrupt) |
-| GP18 | — | free |
+| GP18 | - | free |
 | GP19 | S1 | template example LED, still blinked by `led_task` (LED + 330 Ω to GND; not in the Week 6 map, free it if someone needs the pin) |
-| GP20 | — | free |
-| GP21 | — | free |
-| GP22 | — | free |
-| GP26 | S3 | IR_LEFT, ADC0 (Grove 6) — Week 6 pin map. MH IR module A0, module on 3.3 V. Grove 5 shares GP26: leave its GP26 wire unconnected |
-| GP27 | S3 | IR_CENTER, ADC1 (Grove 6) — Week 6 pin map. MH IR module A0, module on 3.3 V |
-| GP28 | S3 | IR_BARCODE, ADC2 (Grove 7) — Week 6 pin map. barcode sensor, barcodes decoded by `line_task` |
+| GP20 | - | free |
+| GP21 | - | free |
+| GP22 | - | free |
+| GP26 | S3 | IR_LEFT, ADC0 (Grove 6) - Week 6 pin map. MH IR module A0, module on 3.3 V. Grove 5 shares GP26: leave its GP26 wire unconnected |
+| GP27 | S3 | IR_CENTER, ADC1 (Grove 6) - Week 6 pin map. MH IR module A0, module on 3.3 V |
+| GP28 | S3 | IR_BARCODE, ADC2 (Grove 7) - Week 6 pin map. barcode sensor, barcodes decoded by `line_task` |
 
 ## 3. Peripherals
 
@@ -107,11 +103,11 @@ the drivers have no locking to stop it.
 
 | Peripheral | Owner subsystem | Owning task | Pins |
 |---|---|---|---|
-| UART1 | — | not used | — |
-| I2C0 | — | not used | — |
+| UART1 | - | not used | - |
+| I2C0 | - | not used | - |
 | I2C1 | S4 | `imu_task` (own I2C1 driver in `subsystem4/subsystem4.c`: the kernel I2C driver is off, `DEVCNF_USE_IIC 0`, and its I2C1 pins are GP6/GP7) | GP2, GP3 |
-| SPI0 | — | not used | — |
-| SPI1 | — | not used | — |
+| SPI0 | - | not used | - |
+| SPI1 | - | not used | - |
 | ADC | S3 | `line_task` (kernel driver `adca`, opened by `ir_init()` in `subsystem3/subsystem3.c`) | GP26–GP28 |
 | PWM slices (list) | S2: slices 4, 5; S5: slice 6 | `motion_task`; `s5_scan` | GP8–GP11; GP12 |
 | IO_IRQ_BANK0 (all GPIO interrupts) | shared: one handler, in `subsystem5/subsystem5.c` (`gpio_irq_attach()` in `subsystem5.h`; move it when the team picks a place for shared code) | interrupt handler, no task | GP5 echo (S5), GP16/GP17 encoders (S2). Anyone else needing a GPIO interrupt uses `gpio_irq_attach()` too |
@@ -166,7 +162,7 @@ sends to it or waits on it. Agree on the data format before coding.
 
 | ID | From → To | Mechanism | Object ID name | Data / meaning | Agreed by |
 |---|---|---|---|---|---|
-| IF-01 – IF-04 | — | — | — | template examples, removed when Motion Control replaced the producer | — |
+| IF-01 – IF-04 | - | - | - | template examples, removed when Motion Control replaced the producer | - |
 | IF-05 | S4 → S1 | task control | `tid_led` | `tk_sus_tsk` / `tk_rsm_tsk` / `tk_chg_pri` | *example* (nothing uses it now) |
 | IF-06 | VC → S1 | message buffer (owned by S1) | `mbf_telem_q` | `telem_snapshot_t` in `subsystem1/telem_format.h`, posted by `vc_task` once a second with `TMO_POL` | in use (S1) |
 | IF-07 | S1 → VC | message buffer (created by S1 for now) | `mbf_remote_cmd_q` | `remote_cmd_t` in `subsystem1/telem_format.h` | in use (S1) |
@@ -192,7 +188,7 @@ Each interface is tested by at least one integration test
 ## 6. Kernel object budget
 
 Limits are set in `config/config.h`. If the team needs more, raise the
-limit there. The numbers below are what the IS22 code creates (template examples off).
+limit there. The numbers below are what the IS22 code creates.
 
 | Object | Limit | S1 | S2 | S3 | S4 | S5 |
 |---|---|---|---|---|---|---|
