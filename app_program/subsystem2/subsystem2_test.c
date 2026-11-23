@@ -10,9 +10,9 @@
  *	ground: build with S2_BENCH_TEST set to 1 below.
  */
 
-#include "motion_private.h"
-#include "motion_config.h"
-#include "motion_math.h"
+#include "subsystem2.h"
+
+
 #include "../test_report.h"
 
 #if APP_TEST

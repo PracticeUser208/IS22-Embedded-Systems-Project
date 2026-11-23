@@ -16,16 +16,17 @@
  *	  4. runs one speed PID per wheel: duty = feed-forward + PID
  *	  5. publishes a status snapshot for telemetry
  *
+ *	Before step 4 it checks the team's ESTOP_REQ flag (app.h).  While
+ *	any stop bit is set (IMU: lifted / overturned or fault, obstacle within 15 cm)
+ *	the current move ends and both motors stay braked; new moves are
+ *	ended the same way until the Vehicle Controller clears the bits.
+ *
  *	Single-channel encoders cannot tell direction, so each wheel's
  *	edges are counted in the direction of its current SETPOINT, and
  *	the PID is never allowed to drive a wheel against its setpoint.
  */
 
-#include "motion_private.h"
-#include "motion_config.h"
-#include "motion_math.h"
-#include "drv_motor.h"
-#include "drv_encoder.h"
+#include "subsystem2.h"
 
 #define TICK_S		((float)MOTION_TICK_MS / 1000.0f)
 #define WHEELS		2u
@@ -256,6 +257,31 @@ static void run_velocity(void)
 	g_wheel[WHEEL_R].target_mm_s = g_ctrl.vel_r_mm_s;
 }
 
+/* ESTOP_REQ (team rule, Tribunal 1): checked every tick, before the
+   motor PWM is written.  TRUE while any stop bit is set. */
+static bool estop_active(void)
+{
+	T_RFLG	rflg;
+
+	return (flg_estop_req > 0) &&
+	       (tk_ref_flg(flg_estop_req, &rflg) == E_OK) &&
+	       ((rflg.flgptn & ESTOP_ALL) != 0u);
+}
+
+/* Stop for an ESTOP: end the move (DONE + FAULT: it did not arrive)
+   and set both targets to 0, so drive_wheels() brakes both motors. */
+static void estop_hold(void)
+{
+	if (g_ctrl.state != MOTION_STATE_IDLE)
+	{
+		g_ctrl.state        = MOTION_STATE_IDLE;
+		g_ctrl.profile_mm_s = 0.0f;
+		(void)tk_set_flg(flg_motion, MOTION_FLG_DONE | MOTION_FLG_FAULT);
+	}
+	g_wheel[WHEEL_L].target_mm_s = 0.0f;
+	g_wheel[WHEEL_R].target_mm_s = 0.0f;
+}
+
 /* 4. Speed PID per wheel -> motor duty */
 static void drive_wheels(void)
 {
@@ -275,10 +301,26 @@ static void drive_wheels(void)
 			continue;
 		}
 
-		p_w->dir = (p_w->target_mm_s > 0.0f) ? 1 : -1;
+		{
+			int32_t dir = (p_w->target_mm_s > 0.0f) ? 1 : -1;
+
+			if (dir != p_w->dir) {
+				/* reversing (line search swings): the integral
+				   belongs to the old direction and would drive
+				   the reversed wheel far too fast (2 Nov) */
+				pid_reset(&p_w->pid);
+				p_w->dir = dir;
+			}
+		}
+#if MOTION_SPEED_FEEDBACK
 		duty = motion_feedforward(p_w->target_mm_s) +
 		       pid_update(&p_w->pid, p_w->target_mm_s,
 				  p_w->speed_mm_s, TICK_S);
+#else
+		/* no encoder feedback (motion_config.h): same power for the
+		   same speed on both wheels */
+		duty = motion_feedforward(p_w->target_mm_s);
+#endif
 
 		/* Never drive against the setpoint: with no direction
 		   sensing we could not count those edges correctly. */
@@ -312,6 +354,7 @@ static void publish_status(void)
 	g_motion_status.left_count          = g_wheel[WHEEL_L].total_counts;
 	g_motion_status.right_count         = g_wheel[WHEEL_R].total_counts;
 	g_motion_status.fault_count         = g_fault_count;
+	g_motion_status.seq++;
 	(void)tk_unl_mtx(mtx_motion_status);
 }
 
@@ -369,6 +412,10 @@ EXPORT void motion_task(INT stacd, void *exinf)
 				break;
 		}
 
+		if (estop_active())
+		{
+			estop_hold();
+		}
 		drive_wheels();
 		publish_status();
 	}
