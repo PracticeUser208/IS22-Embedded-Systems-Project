@@ -33,7 +33,9 @@
  *  Format version: sent in every car -> PC frame (except the ACK).
  *  Bump it whenever any width, order or enum on the wire changes.
  * =================================================================== */
-#define TF_VERSION              2u
+#define TF_VERSION              4u      /* 20 Nov: was 3 (the car's tilt
+                                           added at the end); 19 Nov: was 2
+                                           (lift cause and IMU fault bits) */
 #define TF_VERSION_BITS         3u
 
 /* ===================================================================
@@ -251,6 +253,19 @@ typedef enum
 #define TF_OBST_STATE_BITS      4u      /* TBC Buddy 5                     */
 #define TF_FAULT_BITS           8u      /* TBC VC                          */
 #define TF_ESTOP_BITS           3u      /* TBC Buddy 4 / VC                */
+#define TF_LIFT_CAUSE_BITS      2u      /* last lift since RESET: bit 0 moved
+                                           up, bit 1 tipped over (Buddy 4's
+                                           LIFT_CAUSE_UP / LIFT_CAUSE_TILT) */
+#define TF_LIFT_UP              0x01u
+#define TF_LIFT_TIPPED          0x02u
+#define TF_IMU_FAULT_BITS       7u      /* IMU fault bits (Buddy 4's IMU_FAULT_xxx,
+                                           0x01 NACK .. 0x40 QUEUE_FULL); 0 = none */
+#define TF_TILT_BITS            7u      /* 20 Nov: pitch (+ nose up) and roll
+                                           (+ right side up), the value furthest
+                                           from 0 in the last 0.5-1 s, signed,
+                                           0.5 deg steps                     */
+#define TF_TILT_MIN             (-64)   /* -32.0 deg (or more)               */
+#define TF_TILT_MAX             63      /* +31.5 deg (or more)               */
 
 /* Heartbeat-only fields (Buddy 1 owns these, not TBC) */
 #define TF_UPTIME_BITS          16u     /* seconds, saturates at 65535     */
@@ -274,7 +289,9 @@ typedef enum
                      TF_MOTION_BITS + TF_OBST_DIST_BITS +                  \
                      TF_OBST_WIDTH_BITS + TF_OBST_ANGLE_BITS +             \
                      (2u * TF_CLEAR_BITS) + TF_OBST_PLAN_BITS +            \
-                     TF_OBST_STATE_BITS + TF_FAULT_BITS + TF_ESTOP_BITS)
+                     TF_OBST_STATE_BITS + TF_FAULT_BITS + TF_ESTOP_BITS +   \
+                     TF_LIFT_CAUSE_BITS + TF_IMU_FAULT_BITS +               \
+                     (2u * TF_TILT_BITS))
 
 #define TF_HB_BITS  (TF_VERSION_BITS + TF_SEQ_BITS + TF_SYS_STATE_BITS +   \
                      TF_FAULT_BITS + TF_UPTIME_BITS + TF_DROPS_BITS +      \
@@ -284,7 +301,7 @@ typedef enum
 #define TF_ACK_BITS (TF_CMD_BITS + TF_ACK_RESULT_BITS)
 
 #define TF_BYTES(bits)          (((bits) + 7u) / 8u)
-#define TF_TM_LEN               TF_BYTES(TF_TM_BITS)    /* 19 with TBC widths */
+#define TF_TM_LEN               TF_BYTES(TF_TM_BITS)    /* 22 (171 bits; v3: 20, v2: 19) */
 #define TF_HB_LEN               TF_BYTES(TF_HB_BITS)    /*  7 */
 #define TF_CMD_LEN              TF_BYTES(TF_CMD_BITS)   /*  1 */
 #define TF_ACK_LEN              TF_BYTES(TF_ACK_BITS)   /*  2 */
@@ -326,11 +343,16 @@ typedef struct
     uint32_t clear_l     : TF_CLEAR_BITS;
     uint32_t clear_r     : TF_CLEAR_BITS;
 
-    /* word 5: 18 bits */
+    /* word 5: 27 bits */
     uint32_t obst_plan   : TF_OBST_PLAN_BITS;
     uint32_t obst_state  : TF_OBST_STATE_BITS;
     uint32_t fault       : TF_FAULT_BITS;
     uint32_t estop       : TF_ESTOP_BITS;
+    uint32_t lift_cause  : TF_LIFT_CAUSE_BITS;
+    uint32_t imu_fault   : TF_IMU_FAULT_BITS;
+    /* word 6: 14 bits (20 Nov) */
+    int32_t  pitch_x2    : TF_TILT_BITS;        /* signed, 0.5 deg */
+    int32_t  roll_x2     : TF_TILT_BITS;        /* signed, 0.5 deg */
 } telem_snapshot_t;
 
 /* remote_cmd_q message: Telemetry task -> Vehicle Controller */
@@ -356,9 +378,10 @@ _Static_assert(OBST_STATE_COUNT <= (1u << TF_OBST_STATE_BITS), "obst_state field
 _Static_assert(CMD_CODE_COUNT   <= (1u << TF_CMD_CODE_BITS),   "cmd code field too small");
 _Static_assert(ACK_RESULT_COUNT <= (1u << TF_ACK_RESULT_BITS), "ack result field too small");
 _Static_assert(TF_OBST_NO_ECHO  <  (1u << TF_OBST_DIST_BITS),  "no-echo sentinel does not fit");
+_Static_assert((TF_LIFT_UP | TF_LIFT_TIPPED) < (1u << TF_LIFT_CAUSE_BITS), "lift cause field too small");
 _Static_assert(TF_TM_LEN  <= 256u, "NFR7: telemetry frame > 256 B");
 _Static_assert(TF_HB_LEN  <= 256u, "NFR7: heartbeat frame > 256 B");
 _Static_assert(sizeof(remote_cmd_t) == 1u, "remote_cmd_t must stay 1 byte");
-_Static_assert(sizeof(telem_snapshot_t) <= 20u, "telem_q message grew past 20 bytes");
+_Static_assert(sizeof(telem_snapshot_t) <= 24u, "telem_q message grew past 24 bytes (20 Nov: was 20, tilt added)");
 
 #endif /* TELEM_FORMAT_H */
