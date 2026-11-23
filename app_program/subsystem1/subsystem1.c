@@ -318,6 +318,10 @@ uint16_t tc_encode_tm(telem_snapshot_t const *p_snap, uint8_t seq,
         bs_put(&bs, p_snap->obst_state,           TF_OBST_STATE_BITS);
         bs_put(&bs, p_snap->fault,                TF_FAULT_BITS);
         bs_put(&bs, p_snap->estop,                TF_ESTOP_BITS);
+        bs_put(&bs, p_snap->lift_cause,           TF_LIFT_CAUSE_BITS);
+        bs_put(&bs, p_snap->imu_fault,            TF_IMU_FAULT_BITS);
+        bs_put(&bs, (uint32_t)p_snap->pitch_x2,   TF_TILT_BITS);
+        bs_put(&bs, (uint32_t)p_snap->roll_x2,    TF_TILT_BITS);
 
         if (false == bs.b_overflow)
         {
@@ -447,6 +451,10 @@ bool tc_decode_tm(uint8_t const *p_in, uint16_t len,
             p_snap->obst_state = bs_get(&bs, TF_OBST_STATE_BITS);
             p_snap->fault      = bs_get(&bs, TF_FAULT_BITS);
             p_snap->estop      = bs_get(&bs, TF_ESTOP_BITS);
+            p_snap->lift_cause = bs_get(&bs, TF_LIFT_CAUSE_BITS);
+            p_snap->imu_fault  = bs_get(&bs, TF_IMU_FAULT_BITS);
+            p_snap->pitch_x2   = bs_get_signed(&bs, TF_TILT_BITS);
+            p_snap->roll_x2    = bs_get_signed(&bs, TF_TILT_BITS);
 
             b_ok = (false == bs.b_overflow);
         }
