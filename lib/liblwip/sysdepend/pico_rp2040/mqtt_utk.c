@@ -13,6 +13,18 @@
  *	This file does not include tk/tkernel.h or any pico-sdk/cyw43 header
  *	(unlike cyw43_utk.c and sys_arch.c), so it isn't subject to either
  *	file's size_t workaround -- tm/tmonitor.h alone is namespace-safe here.
+ *
+ *	IS22 addition -- Telemetry (subsystem 1) bridge, app_program/subsystem1/
+ *	comm_bridge.h.  Application tasks may not call MQTT (TEAM.md section
+ *	3), so this file, in the WiFi task, calls subsystem 1's hooks:
+ *	  - mqtt_utk_poll() (every WiFi poll) publishes the frames comm_task
+ *	    queued, one at a time; a frame the client has no room for yet is
+ *	    kept and tried again on the next poll;
+ *	  - a message on TF_TOPIC_CMD goes to s1_bridge_on_cmd(), and the ACK
+ *	    it returns is published on TF_TOPIC_ACK;
+ *	  - s1_bridge_set_online() follows the session.
+ *	The hooks are weak references: without subsystem 1 this file behaves
+ *	exactly as the template did.
  */
 
 #include "lwip/apps/mqtt.h"
@@ -21,6 +33,11 @@
 #include "wifi_secrets.h"
 #include "mqtt_utk.h"
 #include <tm/tmonitor.h>
+#include "../../../../app_program/subsystem1/comm_bridge.h"
+
+#pragma weak s1_bridge_take_tx
+#pragma weak s1_bridge_on_cmd
+#pragma weak s1_bridge_set_online
 
 #define MQTT_UTK_HEARTBEAT_MS   5000
 #define MQTT_UTK_KEEPALIVE_S    60
@@ -39,11 +56,34 @@ static ip_addr_t	broker_addr;
 static u8_t		connecting;
 
 static char		rx_topic[MQTT_UTK_RX_TOPIC_MAX];
-static UB		rx_data[MQTT_UTK_RX_DATA_MAX];
+static UB		rx_data[MQTT_UTK_RX_DATA_MAX];	/* raw bytes */
 static u16_t		rx_len;
 static u8_t		rx_truncated;
 
+/* Subsystem 1 frame waiting to be published (0 = none) */
+static const char	*s1_topic;
+static uint8_t		s1_frame[S1_TX_MSG_MAX];
+static u16_t		s1_len;
+
 static void heartbeat_timeout(void *arg);
+
+static u8_t topic_is(const char *a, const char *b)
+{
+	while((*a != '\0') && (*a == *b)) {
+		a++;
+		b++;
+	}
+	return (u8_t)(*a == *b);
+}
+
+static void s1_online(u8_t on)
+{
+	if(s1_bridge_set_online != NULL) {
+		s1_bridge_set_online(on);
+	}
+}
+
+static void publish_done_cb(void *arg, err_t result);
 
 /* mqtt.c NUL-terminates the topic before handing it over, but it is only
  * valid for the duration of this call -- copy it out. */
@@ -71,20 +111,42 @@ static void incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t flags)
 
 	for(i = 0; i < len; i++) {
 		if(rx_len < (MQTT_UTK_RX_DATA_MAX - 1)) {
-			/* The console is a terminal -- keep raw bytes from a
-			 * payload this demo did not publish from scrambling it. */
-			UB c = data[i];
-			rx_data[rx_len++] = (c >= 0x20 && c < 0x7f)? c: '.';
+			rx_data[rx_len++] = data[i];
 		} else {
 			rx_truncated = 1;
 		}
 	}
 
-	if((flags & MQTT_DATA_FLAG_LAST) != 0) {
-		rx_data[rx_len] = '\0';
-		tm_printf((UB*)"mqtt: RX [%s] \"%s\"%s\n", rx_topic, rx_data,
-			  rx_truncated? " (truncated)": "");
+	if((flags & MQTT_DATA_FLAG_LAST) == 0) {
+		return;
 	}
+
+	if(topic_is(rx_topic, TF_TOPIC_CMD) && (s1_bridge_on_cmd != NULL)) {
+		/* Binary command for subsystem 1 (it prints its own RX line) */
+		uint8_t	ack[TF_ACK_LEN];
+		u16_t	n = s1_bridge_on_cmd(rx_data, rx_len, ack, sizeof ack);
+
+		if((n > 0u) && mqtt_client_is_connected(client)) {
+			err_t err = mqtt_publish(client, TF_TOPIC_ACK, ack, n,
+						 0 /* qos */, 0 /* retain */,
+						 publish_done_cb, NULL);
+			if(err != ERR_OK) {
+				tm_printf((UB*)"mqtt: ACK not sent, err=%d\n", (int)err);
+			}
+		}
+		return;
+	}
+
+	/* The console is a terminal -- keep raw bytes from a payload this
+	 * demo did not publish from scrambling it. */
+	for(i = 0; i < rx_len; i++) {
+		if((rx_data[i] < 0x20) || (rx_data[i] >= 0x7f)) {
+			rx_data[i] = '.';
+		}
+	}
+	rx_data[rx_len] = '\0';
+	tm_printf((UB*)"mqtt: RX [%s] \"%s\"%s\n", rx_topic, rx_data,
+		  rx_truncated? " (truncated)": "");
 }
 
 static void subscribe_done_cb(void *arg, err_t result)
@@ -95,6 +157,21 @@ static void subscribe_done_cb(void *arg, err_t result)
 	} else {
 		tm_printf((UB*)"mqtt: subscribe failed, err=%d\n", (int)result);
 	}
+}
+
+/* Subsystem 1 goes online once its command topic is subscribed (or the
+ * attempt is over): telemetry can flow either way. */
+static void subscribe_cmd_done_cb(void *arg, err_t result)
+{
+	(void)arg;
+	if(result == ERR_OK) {
+		tm_printf((UB*)"mqtt: subscribed to " TF_TOPIC_CMD "\n");
+	} else {
+		tm_printf((UB*)"mqtt: subscribe to " TF_TOPIC_CMD " failed, err=%d"
+			  " (telemetry still sent, commands will not arrive)\n",
+			  (int)result);
+	}
+	s1_online(1);
 }
 
 static void publish_done_cb(void *arg, err_t result)
@@ -166,6 +243,19 @@ static void connection_cb(mqtt_client_t *c, void *arg, mqtt_connection_status_t 
 				  (int)err);
 		}
 
+		/* Subsystem 1's command topic */
+		if(s1_bridge_on_cmd != NULL) {
+			err = mqtt_subscribe(client, TF_TOPIC_CMD, 0 /* qos: the PC resends on a missing ACK */,
+					     subscribe_cmd_done_cb, NULL);
+			if(err != ERR_OK) {
+				tm_printf((UB*)"mqtt: subscribe " TF_TOPIC_CMD
+					  " failed, err=%d\n", (int)err);
+				s1_online(1);
+			}
+		} else {
+			s1_online(1);
+		}
+
 		/* Drop any chain left over from a previous connection before
 		 * arming a new one. Each reconnect would otherwise add another
 		 * self-perpetuating heartbeat, and every one of them holds a
@@ -173,6 +263,9 @@ static void connection_cb(mqtt_client_t *c, void *arg, mqtt_connection_status_t 
 		sys_untimeout(heartbeat_timeout, NULL);
 		sys_timeout(MQTT_UTK_HEARTBEAT_MS, heartbeat_timeout, NULL);
 	} else {
+		s1_online(0);
+		s1_len = 0u;		/* stale by the time we are back */
+
 		/* mqtt_client_connect() reconnects on its own for a dropped
 		 * keepalive; a rejected/never-established connection does not
 		 * retry itself, so do that here -- on a delay, so a broker
@@ -216,5 +309,35 @@ void mqtt_utk_start(void)
 	if(err != ERR_OK) {
 		tm_printf((UB*)"mqtt: mqtt_client_connect() failed, err=%d\n", (int)err);
 		connecting = 0;
+	}
+}
+
+/* Called on every WiFi poll: publish subsystem 1's next queued frame.
+ * Never blocks.  ERR_MEM = the client's output buffer or request slots
+ * are busy: keep the frame and try again on the next poll. */
+void mqtt_utk_poll(void)
+{
+	err_t	err;
+
+	if((s1_bridge_take_tx == NULL) || (client == NULL) ||
+	   !mqtt_client_is_connected(client)) {
+		return;
+	}
+
+	if(s1_len == 0u) {
+		s1_len = s1_bridge_take_tx(&s1_topic, s1_frame, sizeof s1_frame);
+		if(s1_len == 0u) {
+			return;
+		}
+	}
+
+	err = mqtt_publish(client, s1_topic, s1_frame, s1_len,
+			   0 /* qos */, 0 /* retain */, publish_done_cb, NULL);
+	if(err != ERR_MEM) {
+		if(err != ERR_OK) {
+			tm_printf((UB*)"mqtt: %s frame not sent, err=%d\n",
+				  s1_topic, (int)err);
+		}
+		s1_len = 0u;
 	}
 }

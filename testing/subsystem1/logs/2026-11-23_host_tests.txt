@@ -1,0 +1,52 @@
+PASS  B1 pack 1|5<<3 == 0x29
+PASS  B2 cross-byte 0xABC -> BC 0A
+PASS  B3 signed -1/-64/+63 round trip
+PASS  B4 overflow flagged, guards untouched
+PASS  B5 overflow is sticky
+PASS  B6 unsigned 1/6/4095/511 round trip
+
+ALL PASSED: 0 failure(s)
+[test_bitpack] exit code 0
+      tm: 54 11 99 3E E2 F8 8D 57 D0 48 E2 91 B5 60 9A F7 8F 20 60 41 A1 07
+PASS  C1 telemetry v4 == 54 11 99 3E ... 41 A1 07 (22 B)
+PASS  C2 telemetry decode ok
+PASS  C2 round trip: seq, speeds, enc wrap, fault, hump
+PASS  C2 round trip: obstacle profile 45cm/12cm/idx13/30/63/TURN_LEFT
+PASS  C2 round trip: lift cause tipped, IMU faults 0x05
+PASS  C2 round trip: tilt +5.0 / -3.0 deg
+PASS  C3 reject wrong length
+PASS  C3 reject unknown version
+PASS  C3 reject version 3
+      hb: 3C 10 88 3E 80 81 00
+PASS  C4 heartbeat v4 == 3C 10 88 3E 80 81 00
+PASS  C5 0x29 -> START seq 5, FORWARDED
+PASS  C5 0x32 -> STOP seq 6, FORWARDED
+PASS  C5 code 6 -> INVALID
+PASS  C5 code 0 -> INVALID
+PASS  C5 2-byte payload -> INVALID
+PASS  C5 empty payload -> INVALID
+PASS  C6 ACK == 29 00
+PASS  C6 ACK DUPLICATE == 29 01
+PASS  C7 speed 100/-100 -> 63/-64
+PASS  C7 hump 200/300/99 -> 127/127/15
+PASS  C7 obstacle 600 cm echo -> 510 (never 511), 150 deg -> idx 24
+PASS  C7 no echo -> 511, no bearing -> 31
+PASS  C7 32 deg rounds to 30 deg (idx 0)
+PASS  C7 33 deg rounds to 35 deg (idx 1)
+PASS  C7 151 deg (outside servo range) -> no bearing
+PASS  C7 distance 99999 -> 16383
+PASS  C8 small buffer -> 0
+
+ALL PASSED: 0 failure(s)
+[test_codec] exit code 0
+telemetry : 171 bits -> 22 bytes on the wire
+heartbeat :  51 bits ->  7 bytes on the wire
+command   :   8 bits ->  1 bytes on the wire
+ack       :  10 bits ->  2 bytes on the wire
+telem_q message  (telem_snapshot_t): 24 bytes
+remote_cmd_q msg (remote_cmd_t)    : 1 bytes
+format version   : 4
+
+ALL PASSED
+[test_format] exit code 0
+PC checks failed: bypass

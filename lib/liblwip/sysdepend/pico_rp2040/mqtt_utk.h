@@ -15,4 +15,11 @@
  */
 void mqtt_utk_start(void);
 
+/*
+ * Call on every cyw43_utk_task() poll while the link is up (cyw43_utk.c).
+ * Publishes the next frame the Telemetry subsystem queued, if any
+ * (app_program/subsystem1/comm_bridge.h). Never blocks.
+ */
+void mqtt_utk_poll(void);
+
 #endif /* MQTT_UTK_H */

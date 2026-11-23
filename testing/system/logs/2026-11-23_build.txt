@@ -1,0 +1,13 @@
+Build check, 23 Nov 2026, GitHub main ad50553 + template sync of lib/, tools/, testing/ (app_program/ unchanged)
+Compiler: arm-none-eabi-gcc (15:13.2.rel1-2) 13.2.1 20231009
+Wi-Fi settings: config/wifi_secrets.example.h (placeholder, not the real hotspot)
+
+make -j8 NET=lwip MQTT=1          -> exit 0, 0 warnings
+make -j8 NET=lwip MQTT=1 TEST=1   -> exit 0, 0 warnings
+
+   text	   data	    bss	    dec	    hex	filename
+ 396292	    408	  98944	 495644	  7901c	mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt.elf
+ 419592	    408	  98960	 518960	  7eb30	mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_test.elf
+
+793600 mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt.uf2
+840192 mtk3pico_smp1_usb_cdc_wifi_lwip_mqtt_test.uf2

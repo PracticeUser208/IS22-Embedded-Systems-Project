@@ -18,11 +18,12 @@ Needs:  pip install paho-mqtt   (1.x or 2.x)
 
 import argparse
 import csv
+import os
 import sys
 import threading
 import time
 
-TF_VERSION = 2
+TF_VERSION = 4      # 20 Nov: was 3 (tilt added); 19 Nov: was 2. Versions 2 and 3 still decode
 
 TOPIC_TM, TOPIC_HB, TOPIC_ACK, TOPIC_CMD = "is22/tm", "is22/hb", "is22/ack", "is22/cmd"
 
@@ -38,7 +39,11 @@ TM_FIELDS = [
     ("obst_angle", 5, False), ("clear_l", 6, False), ("clear_r", 6, False),
     ("obst_plan", 3, False), ("obst_state", 4, False),
     ("fault", 8, False), ("estop", 3, False),
+    ("lift_cause", 2, False), ("imu_fault", 7, False),
+    ("pitch_x2", 7, True), ("roll_x2", 7, True),
 ]
+TM_FIELDS_V3 = TM_FIELDS[:-2]
+TM_FIELDS_V2 = TM_FIELDS[:-4]
 HB_FIELDS = [
     ("version", 3, False), ("seq", 8, False), ("sys_state", 4, False),
     ("fault", 8, False), ("uptime_s", 16, False), ("telem_drops", 8, False),
@@ -51,13 +56,16 @@ SYS_STATE = ["INITIALISING", "IDLE_READY", "PATROLLING", "PAUSED", "HANDLING_BAR
              "STARTUP_ERROR"]
 LINE_STATE = ["INIT", "FOLLOWING", "BARCODE_SCAN", "DECODE", "SUSPENDED", "SEARCH", "FAULT"]
 BARCODE = ["NONE", "LEFT", "RIGHT", "STRAIGHT", "UTURN", "INVALID"]
-MOTION = ["STATIONARY", "ACCELERATING", "TURNING", "CLIMBING_HUMP", "DESCENDING_HUMP", "IMPACT"]
+MOTION = ["STATIONARY", "ACCELERATING", "TURNING", "CLIMBING_HUMP", "DESCENDING_HUMP", "LIFTED",
+          "STEADY"]  # STEADY appended for Buddy 4 (0..5 unchanged)
 OBST_PLAN = ["NONE", "STOP", "CONTINUE", "TURN_LEFT", "TURN_RIGHT", "REVERSE", "BLOCKED"]
 OBST_STATE = ["PATROLLING", "DETECTED", "COARSE_SCAN", "FINE_SCAN", "PROFILE_PLAN",
               "BYPASSING", "REACQUIRE", "BLOCKED", "SENSOR_FAULT"]
 FAULT_BITS = ["MOTOR_STALL", "ENCODER", "IMU", "NO_ECHO", "WIFI_LOSS",
               "LINE_LOST", "NO_PATH", "STARTUP"]
-ESTOP_BITS = ["IMU_IMPACT", "IMU_FAULT", "OBSTACLE"]
+ESTOP_BITS = ["IMU_LIFTED", "IMU_FAULT", "OBSTACLE"]  # IMU_LIFTED: was IMU_IMPACT until 16 Nov
+IMU_FAULT_BITS = ["NACK", "STALE", "BUS_STUCK", "SATURATION", "CAL_FAIL", "TIMING", "QUEUE_FULL"]
+LIFT_CAUSE = ["-", "MOVED_UP", "TIPPED_OVER", "MOVED_UP|TIPPED_OVER"]
 CMD = {"START": 1, "STOP": 2, "PAUSE": 3, "RESUME": 4, "RESET": 5}
 CMD_NAME = {v: k for k, v in CMD.items()}
 ACK_RESULT = ["FORWARDED", "DUPLICATE", "INVALID", "QUEUE_FULL"]
@@ -94,6 +102,19 @@ def pack(values, fields):
     return value.to_bytes(nbytes(fields), "little")
 
 
+def decode_tm(data):
+    """Telemetry frame of version 4 (22 B), 3 (20 B, no tilt) or 2 (19 B, no
+    lift cause, IMU fault bits or tilt): missing fields come back as None.
+    None if none of them."""
+    for fields, ver in ((TM_FIELDS, TF_VERSION), (TM_FIELDS_V3, 3), (TM_FIELDS_V2, 2)):
+        t = unpack(data, fields)
+        if t is not None and t["version"] == ver:
+            for k in ("lift_cause", "imu_fault", "pitch_x2", "roll_x2"):
+                t.setdefault(k, None)
+            return t
+    return None
+
+
 def name_of(table, i):
     return table[i] if 0 <= i < len(table) else f"?{i}"
 
@@ -114,7 +135,11 @@ def fmt_tm(t):
             f"motion={name_of(MOTION, t['motion'])} | obst={obst} w={t['obst_width']} "
             f"at={ang} clear L/R={t['clear_l']}/{t['clear_r']}cm "
             f"plan={name_of(OBST_PLAN, t['obst_plan'])} scan={name_of(OBST_STATE, t['obst_state'])} | "
-            f"fault={bits_of(FAULT_BITS, t['fault'])} estop={bits_of(ESTOP_BITS, t['estop'])}")
+            f"fault={bits_of(FAULT_BITS, t['fault'])} estop={bits_of(ESTOP_BITS, t['estop'])}" +
+            ("" if t.get("lift_cause") is None else
+             f" lift={name_of(LIFT_CAUSE, t['lift_cause'])} imu={bits_of(IMU_FAULT_BITS, t['imu_fault'])}") +
+            ("" if t.get("pitch_x2") is None else
+             f" tilt pitch={t['pitch_x2'] / 2:+.1f} roll={t['roll_x2'] / 2:+.1f}deg"))
 
 
 def fmt_hb(h):
@@ -172,8 +197,8 @@ def cmd_monitor(args):
         now = time.strftime("%H:%M:%S")
         data = bytes(msg.payload)
         if msg.topic == TOPIC_TM:
-            t = unpack(data, TM_FIELDS)
-            if t is None or t["version"] != TF_VERSION:
+            t = decode_tm(data)
+            if t is None:
                 print(f"{now} TM  bad frame ({len(data)} B): {data.hex()}")
                 return
             loss.add(t["seq"])
@@ -195,7 +220,8 @@ def cmd_monitor(args):
         client.subscribe("is22/#")
         print(f"connected to {args.host}:{args.port}, listening on is22/#  (Ctrl+C to stop)")
 
-    client = make_client("is22-ground-monitor")
+    # unique ID: two monitor windows open at once must not kick each other off
+    client = make_client(f"is22-ground-monitor-{os.getpid()}")
     client.on_connect = on_connect
     client.on_message = on_message
     client.connect(args.host, args.port, 30)
@@ -229,7 +255,7 @@ def cmd_send(args, payload, expect_state=None):
             result["ack_ms"] = (time.time() - t_sent[0]) * 1000.0
             ack_evt.set()
         elif msg.topic == TOPIC_TM and expect_state is not None and ack_evt.is_set():
-            t = unpack(data, TM_FIELDS)
+            t = decode_tm(data)
             if t and t["sys_state"] == expect_state and "state_ms" not in result:
                 result["state_ms"] = (time.time() - t_sent[0]) * 1000.0
                 result["tm_seq"] = t["seq"]
@@ -278,13 +304,14 @@ def cmd_send(args, payload, expect_state=None):
 def cmd_selftest():
     """Same vectors as testing/subsystem1/host/test_codec.c (C and Python must agree)."""
     ok = True
-    k_tm = bytes.fromhex("5211993ee2f88d57d048e291b5609af78f2000")
+    k_tm = bytes.fromhex("5411993ee2f88d57d048e291b5609af78f206041a107")
     t = unpack(k_tm, TM_FIELDS)
-    exp = dict(version=2, seq=42, sys_state=2, speed_l=25, speed_r=-3, enc_l=5000 & 0xFFF,
+    exp = dict(version=4, seq=42, sys_state=2, speed_l=25, speed_r=-3, enc_l=5000 & 0xFFF,
                enc_r=4990 & 0xFFF, dist_cm=350, ir_left=1, ir_center=0, ir_barcode=1,
                line_state=1, barcode=2, hump_last=18, hump_peak=30, hump_count=2, motion=3,
                obst_dist=45, obst_width=12, obst_angle=13, clear_l=30, clear_r=63,
-               obst_plan=3, obst_state=4, fault=0x10, estop=0)
+               obst_plan=3, obst_state=4, fault=0x10, estop=0, lift_cause=2, imu_fault=0x05,
+               pitch_x2=10, roll_x2=-6)
     for k, v in exp.items():
         if t[k] != v:
             print(f"FAIL tm {k}: {t[k]} != {v}")
@@ -292,7 +319,15 @@ def cmd_selftest():
     if pack(t, TM_FIELDS) != k_tm:
         print("FAIL tm re-pack")
         ok = False
-    h = unpack(bytes.fromhex("3a10883e808100"), HB_FIELDS)
+    t2 = decode_tm(bytes.fromhex("5211993ee2f88d57d048e291b5609af78f2000"))
+    if t2 is None or (t2["version"], t2["seq"], t2["fault"], t2["lift_cause"]) != (2, 42, 0x10, None):
+        print(f"FAIL v2 frame {t2}")
+        ok = False
+    t3 = decode_tm(bytes.fromhex("5311993ee2f88d57d048e291b5609af78f206001"))
+    if t3 is None or (t3["version"], t3["imu_fault"], t3["pitch_x2"]) != (3, 0x05, None):
+        print(f"FAIL v3 frame {t3}")
+        ok = False
+    h = unpack(bytes.fromhex("3c10883e808100"), HB_FIELDS)
     if (h["seq"], h["sys_state"], h["fault"], h["uptime_s"], h["telem_drops"], h["reconnects"]) != (7, 2, 0x10, 125, 3, 1):
         print(f"FAIL hb {h}")
         ok = False

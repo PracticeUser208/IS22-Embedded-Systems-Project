@@ -36,7 +36,7 @@ static void dump(char const *p_label, uint8_t const *p_buf, uint16_t len)
     printf("\n");
 }
 
-/* The same snapshot as the agreed v2 test vector */
+/* The same snapshot as the agreed v2 test vector, plus the v3 fields */
 static void make_vector_snapshot(telem_snapshot_t *p_s)
 {
     (void)memset(p_s, 0, sizeof *p_s);
@@ -59,14 +59,18 @@ static void make_vector_snapshot(telem_snapshot_t *p_s)
     p_s->obst_state = OBST_PROFILE_PLAN;
     p_s->fault      = FAULT_WIFI_LOSS;
     p_s->estop      = 0u;
+    p_s->lift_cause = TF_LIFT_TIPPED;
+    p_s->imu_fault  = 0x05u;                     /* NACK + BUS_STUCK */
+    p_s->pitch_x2   = 10;                        /* +5.0 deg nose up */
+    p_s->roll_x2    = -6;                        /* -3.0 deg          */
 }
 
 int main(void)
 {
     static uint8_t const k_tm[TF_TM_LEN] =
-        {0x52,0x11,0x99,0x3E,0xE2,0xF8,0x8D,0x57,0xD0,0x48,
-         0xE2,0x91,0xB5,0x60,0x9A,0xF7,0x8F,0x20,0x00};
-    static uint8_t const k_hb[TF_HB_LEN] = {0x3A,0x10,0x88,0x3E,0x80,0x81,0x00};
+        {0x54,0x11,0x99,0x3E,0xE2,0xF8,0x8D,0x57,0xD0,0x48,
+         0xE2,0x91,0xB5,0x60,0x9A,0xF7,0x8F,0x20,0x60,0x41,0xA1,0x07};
+    static uint8_t const k_hb[TF_HB_LEN] = {0x3C,0x10,0x88,0x3E,0x80,0x81,0x00};
 
     telem_snapshot_t snap;
     telem_snapshot_t back;
@@ -81,7 +85,7 @@ int main(void)
     make_vector_snapshot(&snap);
     n = tc_encode_tm(&snap, 42u, out, sizeof out);
     dump("tm", out, n);
-    check("C1 telemetry v2 == 52 11 99 3E ... 20 00 (19 B)", (TF_TM_LEN == n) && (0 == memcmp(out, k_tm, TF_TM_LEN)));
+    check("C1 telemetry v4 == 54 11 99 3E ... 41 A1 07 (22 B)", (TF_TM_LEN == n) && (0 == memcmp(out, k_tm, TF_TM_LEN)));
 
     /* C2: telemetry round trip (decode what we encoded) */
     check("C2 telemetry decode ok", tc_decode_tm(out, n, &back, &seq));
@@ -94,11 +98,16 @@ int main(void)
           (45u == back.obst_dist) && (12u == back.obst_width) && (13u == back.obst_angle) &&
           (30u == back.clear_l) && (63u == back.clear_r) &&
           (OBST_PLAN_TURN_LEFT == back.obst_plan) && (OBST_PROFILE_PLAN == back.obst_state));
+    check("C2 round trip: lift cause tipped, IMU faults 0x05",
+          (TF_LIFT_TIPPED == back.lift_cause) && (0x05u == back.imu_fault));
+    check("C2 round trip: tilt +5.0 / -3.0 deg", (10 == back.pitch_x2) && (-6 == back.roll_x2));
 
     /* C3: decoder rejects wrong length and wrong version */
     check("C3 reject wrong length", !tc_decode_tm(out, (uint16_t)(n - 1u), &back, &seq));
     out[0] = (uint8_t)((out[0] & 0xF8u) | 1u);   /* old version 1 */
     check("C3 reject unknown version", !tc_decode_tm(out, n, &back, &seq));
+    out[0] = (uint8_t)((out[0] & 0xF8u) | 3u);   /* version 3 (20 B, 19 Nov) */
+    check("C3 reject version 3", !tc_decode_tm(out, n, &back, &seq));
 
     /* C4: heartbeat encode matches the reference vector */
     (void)memset(&hb, 0, sizeof hb);
@@ -109,7 +118,7 @@ int main(void)
     hb.reconnects = 1u;
     n = tc_encode_hb(&hb, 7u, out, sizeof out);
     dump("hb", out, n);
-    check("C4 heartbeat v2 == 3A 10 88 3E 80 81 00", (TF_HB_LEN == n) && (0 == memcmp(out, k_hb, TF_HB_LEN)));
+    check("C4 heartbeat v4 == 3C 10 88 3E 80 81 00", (TF_HB_LEN == n) && (0 == memcmp(out, k_hb, TF_HB_LEN)));
 
     /* C5: command decode: valid, invalid code, wrong length */
     out[0] = 0x29u;

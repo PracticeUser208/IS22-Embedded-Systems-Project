@@ -5,6 +5,12 @@
 #include "cyw43_utk.h"
 
 #if TM_NET_LWIP
+/* 1 = keep the CYW43's default power saving (CYW43_DEFAULT_PM); 0 = off,
+   always awake: steadier telemetry (see wifi bring-up below) */
+#ifndef WIFI_POWER_SAVE
+#define WIFI_POWER_SAVE 0
+#endif
+
 /* lwip_init() must run before cyw43_wifi_set_up() -- cyw43_cb_tcpip_init()
  * (lib/cyw43-driver/src/cyw43_lwip.c, unmodified upstream) calls netif_add()
  * as soon as the interface comes up, from inside that same call. sys_check_
@@ -235,6 +241,17 @@ void cyw43_utk_task(int32_t stacd, void *exinf)
     } else {
         (void)cyw43_wifi_get_mac(&cyw43_state, CYW43_ITF_STA,
                                  radio_status.mac);
+#if !WIFI_POWER_SAVE
+        /* Wi-Fi power saving off (4 Nov).  cyw43_wifi_set_up() just set
+         * CYW43_DEFAULT_PM: the radio dozes between beacons and the AP
+         * holds frames for it.  The car's telemetry stalled for 4-100 s at
+         * a time (idle or driving alike, Wi-Fi still joined), then came in
+         * bursts with the send queue overflowing -- lost frames and TCP
+         * backing off.  Awake all the time costs a few tens of mA. */
+        if (cyw43_wifi_pm(&cyw43_state, CYW43_NONE_PM) == 0) {
+            tm_printf((UB*)"wifi: power saving off\n");
+        }
+#endif
 #if TM_NET_LWIP
         /* Join instead of scan: with lwIP wired in, the point of coming up
          * is a working network, not a diagnostic scan. cyw43_cb_tcpip_init()
@@ -340,6 +357,7 @@ void cyw43_utk_task(int32_t stacd, void *exinf)
          * again after connection_cb() schedules a retry. */
         if(radio_status.link_status == CYW43_LINK_UP) {
             mqtt_utk_start();
+            mqtt_utk_poll();    /* IS22: publish queued telemetry */
         }
 #endif
 #endif

@@ -19,6 +19,20 @@ shifts and masks, never text.
 | 1 | `ESTOP_IMU_FAULT` | IMU (Buddy 4) | IMU not working |
 | 2 | `ESTOP_OBSTACLE` | Obstacle Scan (Buddy 5) | obstacle within 15 cm ahead |
 
+### IMU faults (7 bits, `subsystem4/imu.h`, `IMU_FAULT_xxx`)
+
+| Bit | Name | Meaning |
+|---|---|---|
+| 0 | `NACK` | the sensor did not answer on I2C (2 polls in a row) |
+| 1 | `STALE` | the same reading 3 polls in a row |
+| 2 | `BUS_STUCK` | I2C bus held low |
+| 3 | `SATURATION` | reading at full scale (not a blocking fault) |
+| 4 | `CAL_FAIL` | calibration noisy 3 times (car moved during it) |
+| 5 | `TIMING` | poll more than 3 ms late 10 times in a row |
+| 6 | `QUEUE_FULL` | `imu_evt_q` full |
+
+Lift cause (2 bits): bit 0 moved up, bit 1 tipped over.
+
 Motion Control checks these every 20 ms control tick, before its command.
 Only the Vehicle Controller clears them.
 
@@ -57,7 +71,7 @@ Frames are bit-packed binary (`subsystem1/subsystem1.c`, bit packer), LSB first.
 
 | Topic | Direction | Bits | Bytes |
 |---|---|---|---|
-| `is22/tm` telemetry | car -> PC, every second | 148 | 19 |
+| `is22/tm` telemetry | car -> PC, every second | 171 | 22 |
 | `is22/hb` heartbeat | car -> PC | 51 | 7 |
 | `is22/cmd` command | PC -> car | 8 | 1 |
 | `is22/ack` command result | car -> PC | 10 | 2 |
@@ -68,7 +82,7 @@ Frames are bit-packed binary (`subsystem1/subsystem1.c`, bit packer), LSB first.
 
 | Field | Bits | Range / unit |
 |---|---|---|
-| version | 3 | 2 |
+| version | 3 | 4 |
 | sequence | 8 | 0-255, wraps |
 | system state | 4 | table 2 |
 | drive mode | 1 | table 2 |
@@ -89,6 +103,14 @@ Frames are bit-packed binary (`subsystem1/subsystem1.c`, bit packer), LSB first.
 | obstacle state | 4 | table 2 |
 | faults | 8 | `flg_sysfault` bits |
 | stop sources | 3 | `flg_estop_req` bits |
+| lift cause | 2 | last lift since RESET: bit 0 moved up, bit 1 tipped over |
+| IMU faults | 7 | IMU fault bits (table 1), 0 = none |
+| pitch | 7 | signed, 0.5 deg steps, -32..+31.5 deg, + nose up: the value furthest from 0 in the last 0.5-1 s |
+| roll | 7 | the same for the sideways tilt, + right side up |
+
+Version 3 (19 Nov): the lift cause and the IMU fault bits were added at the end
+(148 bits / 19 B before). Version 4 (20 Nov): pitch and roll added (157 bits /
+20 B before). The dashboard still reads version 2 and 3 frames.
 
 ### Heartbeat (`is22/hb`)
 
@@ -142,6 +164,12 @@ distance 9 bits. Scan table: 25 slots (-60..+60 deg in 5 deg steps), each a
 | 31-16 | time stamp | ms, low 16 bits |
 
 `imu_q` (VC -> IMU): one command, 0 = RESET (1 bit).
+
+### IMU tilt word: IMU -> Vehicle Controller (`vc_imu_msg.h`, 20 Nov)
+
+One 32-bit word, written by the IMU task with a single aligned store every
+0.5 s and read once by the VC: bits 6-0 pitch, bits 13-7 roll (each 7 bits
+signed, 0.5 deg steps, the value furthest from 0 in the last 0.5-1 s).
 
 ### Motion Control snapshot for the IMU (`subsystem4/subsystem4.h`)
 

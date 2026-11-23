@@ -1,0 +1,1 @@
+SELFTEST PASSED: Python decoder matches the C codec vectors

@@ -23,14 +23,14 @@ int main(void)
 
     printf("format version   : %u\n", TF_VERSION);
 
-    if ((19u != TF_TM_LEN) || (7u != TF_HB_LEN) || (1u != TF_CMD_LEN) || (2u != TF_ACK_LEN))
+    if ((22u != TF_TM_LEN) || (7u != TF_HB_LEN) || (1u != TF_CMD_LEN) || (2u != TF_ACK_LEN))
     {
-        printf("FAIL  wire sizes differ from the v2 layout 19/7/1/2\n");
+        printf("FAIL  wire sizes differ from the v4 layout 22/7/1/2\n");
         fail = 1;
     }
-    if (sizeof(telem_snapshot_t) > 20u)
+    if (sizeof(telem_snapshot_t) > 24u)
     {
-        printf("FAIL  telem_snapshot_t is larger than 20 bytes\n");
+        printf("FAIL  telem_snapshot_t is larger than 24 bytes (20 Nov: was 20, tilt added)\n");
         fail = 1;
     }
 

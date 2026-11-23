@@ -1,0 +1,263 @@
+Buddy 3 pure-logic regression failures: 0
+[s3] exit code 0
+line_follow regression failures: 0
+[line] exit code 0
+BC-09 (second look) failures: 0
+BC-10 (faint bars, 45-100 % of the tape) failures: 0
+BC-11 spot 3 mm: 516 read, 0 WRONG, 0 not
+BC-11 spot 5 mm: 516 read, 0 WRONG, 0 not
+BC-12 speed +-40 %: 516 read, 0 WRONG, 0 not
+BC-13 (no barcode, just the line): 0 reads (must be 0)
+BC-13 (sharp sensor, no drop-outs): 0 flagged as drop-outs (must be 0)
+BC-14 (weaving 5-45 mm/s): K read by time 4 of 25, by distance 25 of 25
+BC-11..14 failures: 0
+code39 regression failures: 0
+K at 10 mm/s, threshold 35 %: reads with a spot up to 5.00 mm
+K at 20 mm/s, threshold 35 %: reads with a spot up to 5.00 mm
+K at 30 mm/s, threshold 35 %: reads with a spot up to 5.00 mm
+K at 40 mm/s, threshold 35 %: reads with a spot up to 5.00 mm
+K at 10 mm/s, threshold 50 %: reads with a spot up to 6.50 mm
+K at 20 mm/s, threshold 50 %: reads with a spot up to 6.50 mm
+K at 30 mm/s, threshold 50 %: reads with a spot up to 6.50 mm
+K at 40 mm/s, threshold 50 %: reads with a spot up to 6.50 mm
+[barcode] exit code 0
+noise  20 mg  drive 10 min level: 0 false stops
+               20 humps, nose 15 deg up then down: 0 false stops
+               20 humps, nose 25 deg up then down: 0 false stops
+               lift 150 mm in 0.4 s, level: stopped 50/50  (after 70 ms, cause 1)
+               lift 150 mm in 0.6 s, level: stopped 50/50  (after 130 ms, cause 1)
+               lift 200 mm in 0.8 s, level: stopped 50/50  (after 160 ms, cause 1)
+               lift 100 mm in 0.5 s, level: stopped 50/50  (after 120 ms, cause 1)
+               lift 150 mm in 1.0 s, level: stopped 50/50  (after 280 ms, cause 1)
+               lift 100 mm in 1.0 s, level: stopped  8/50  (after 420 ms, cause 1)
+               tipped pitch 0 roll 30 deg: stopped after 580 ms (cause 2)
+               tipped pitch 50 roll 0 deg: stopped after 580 ms (cause 2)
+               tipped pitch 0 roll 180 deg: stopped after 280 ms (cause 2)
+               held tipped 5 s: 1 event(s); tipped again later: 1 event(s)
+noise  50 mg  drive 10 min level: 0 false stops
+               20 humps, nose 15 deg up then down: 0 false stops
+               20 humps, nose 25 deg up then down: 0 false stops
+               lift 150 mm in 0.4 s, level: stopped 50/50  (after 70 ms, cause 1)
+               lift 150 mm in 0.6 s, level: stopped 50/50  (after 130 ms, cause 1)
+               lift 200 mm in 0.8 s, level: stopped 50/50  (after 170 ms, cause 1)
+               lift 100 mm in 0.5 s, level: stopped 50/50  (after 120 ms, cause 1)
+               lift 150 mm in 1.0 s, level: stopped 49/50  (after 270 ms, cause 1)
+               lift 100 mm in 1.0 s, level: stopped 18/50  (after 360 ms, cause 1)
+               tipped pitch 0 roll 30 deg: stopped after 590 ms (cause 2)
+               tipped pitch 50 roll 0 deg: stopped after 570 ms (cause 2)
+               tipped pitch 0 roll 180 deg: stopped after 280 ms (cause 2)
+               held tipped 5 s: 1 event(s); tipped again later: 1 event(s)
+noise 100 mg  drive 10 min level: 4 false stops
+               20 humps, nose 15 deg up then down: 1 false stops
+               20 humps, nose 25 deg up then down: 1 false stops
+               lift 150 mm in 0.4 s, level: stopped 47/50  (after 60 ms, cause 1)
+               lift 150 mm in 0.6 s, level: stopped 49/50  (after 100 ms, cause 1)
+               lift 200 mm in 0.8 s, level: stopped 50/50  (after 170 ms, cause 1)
+               lift 100 mm in 0.5 s, level: stopped 49/50  (after 120 ms, cause 1)
+               lift 150 mm in 1.0 s, level: stopped 48/50  (after 230 ms, cause 1)
+               lift 100 mm in 1.0 s, level: stopped 25/50  (after 270 ms, cause 1)
+               tipped pitch 0 roll 30 deg: stopped after 590 ms (cause 2)
+               tipped pitch 50 roll 0 deg: stopped after 560 ms (cause 2)
+               tipped pitch 0 roll 180 deg: stopped after 280 ms (cause 2)
+               held tipped 5 s: 1 event(s); tipped again later: 0 event(s)
+LIFT CHECK PASSED
+[lift] exit code 0
+hump enter 0.044 rad (2.5 deg), exit 0.026 rad, min 0.0 mm, gain 1.00
+hump (ramp 30 mm, top 80 mm)  wheelbase  peak pitch  before 19 Nov   now
+     3 mm                      100 mm     1.8 deg    not detected   NOT DETECTED
+     3 mm                      140 mm     1.3 deg    not detected   NOT DETECTED
+     5 mm                      100 mm     2.9 deg    not detected   4.0 mm (1 report)
+     5 mm                      140 mm     2.1 deg    not detected   NOT DETECTED
+    10 mm                      100 mm     5.8 deg    entered        9.5 mm (1 report)
+    10 mm                      140 mm     4.1 deg    entered        7.5 mm (2 reports)
+    20 mm                      100 mm    11.4 deg    entered        19.0 mm (1 report)
+    20 mm                      140 mm     8.2 deg    entered        15.5 mm (1 report)
+hump under one wheel (ramp 30 mm, top 80 mm), track 120 mm:
+     3 mm: roll peak  1.5 deg -> NOT DETECTED
+     5 mm: roll peak  2.5 deg -> NOT DETECTED
+    10 mm: roll peak  4.8 deg -> 10.0 mm (1 report)
+    20 mm: roll peak  9.7 deg -> 20.0 mm (1 report)
+10 mm hump under a wheel, then the caster: 1 report (13.5 mm)
+course hump (10 mm, 90 mm ramps, one wheel, +-2.5 deg jolts): 1 report (11.0 mm); flat floor 10 min with the jolts: 0 false humps
+course hump, the car leaning 1 / 0.8 deg while driving, with stops on the hump: 1 report (12.5 mm)
+course hump 30 cm after starting, the car leaning 1 / 0.8 deg once it drives: 1 report (12.5 mm)
+flat floor, 10 min with +-0.25 deg noise: 0 false humps
+ALL PASSED
+[hump] exit code 0
+BY-01 box 100 wide, 100 deep, -50 off the line                            24 of  24 round,   0 gave up; 3.5 looks, 4.8 turns (370 deg), 892 mm a run, out 204 mm (at most 248)
+  WRONG: box 100 wide, 250 deep, +0 off the line, ideal echo, seed 0: TOUCHED the obstacle (car at 251, -187, 57 deg)
+  WRONG: box 100 wide, 250 deep, +0 off the line, ideal echo, seed 2: TOUCHED the obstacle (car at 238, -192, 52 deg)
+  WRONG: box 100 wide, 250 deep, +0 off the line, flat faces only square on, seed 1: TOUCHED the obstacle (car at 189, -180, 32 deg)
+  WRONG: box 100 wide, 250 deep, +0 off the line, flat faces only square on, seed 4: TOUCHED the obstacle (car at 179, -193, 50 deg)
+  WRONG: box 100 wide, 250 deep, +0 off the line, flat faces only square on, seed 5: TOUCHED the obstacle (car at 176, -182, 34 deg)
+  WRONG: box 100 wide, 250 deep, +0 off the line, flat faces only square on, seed 7: TOUCHED the obstacle (car at 180, -178, 29 deg)
+  WRONG: box 100 wide, 250 deep, +0 off the line, the same, narrow beam, seed 2: TOUCHED the obstacle (car at 183, 173, -29 deg)
+  WRONG: box 100 wide, 250 deep, +0 off the line, the same, narrow beam, seed 3: TOUCHED the obstacle (car at 182, 190, -42 deg)
+  WRONG: box 100 wide, 250 deep, +0 off the line, the same, narrow beam, seed 4: TOUCHED the obstacle (car at 185, 192, -48 deg)
+  WRONG: box 100 wide, 250 deep, +0 off the line, the same, narrow beam, seed 7: TOUCHED the obstacle (car at 172, 186, -38 deg)
+BY-02 box 100 wide, 250 deep, +0 off the line                             14 of  24 round,   0 gave up; 2.9 looks, 4.1 turns (312 deg), 887 mm a run, out 212 mm (at most 255)
+BY-03 box 100 wide, 450 deep, +50 off the line                            24 of  24 round,   0 gave up; 4.4 looks, 6.7 turns (425 deg), 1208 mm a run, out 205 mm (at most 229)
+  WRONG: box 100 wide, 700 deep, -50 off the line, ideal echo, seed 1: TOUCHED the obstacle (car at 712, 134, -59 deg)
+  WRONG: box 100 wide, 700 deep, -50 off the line, ideal echo, seed 4: TOUCHED the obstacle (car at 711, 135, -59 deg)
+BY-04 box 100 wide, 700 deep, -50 off the line                            22 of  24 round,   0 gave up; 4.8 looks, 5.9 turns (391 deg), 1489 mm a run, out 214 mm (at most 285)
+  WRONG: box 100 wide, 1000 deep, +0 off the line, the same, narrow beam, seed 0: TOUCHED the obstacle (car at 1103, 10, -65 deg)
+BY-05 box 100 wide, 1000 deep, +0 off the line                            23 of  24 round,   0 gave up; 5.7 looks, 8.3 turns (404 deg), 1791 mm a run, out 231 mm (at most 296)
+BY-06 box 130 wide, 100 deep, +0 off the line                             24 of  24 round,   0 gave up; 3.1 looks, 4.5 turns (344 deg), 882 mm a run, out 215 mm (at most 261)
+  WRONG: box 130 wide, 250 deep, +50 off the line, ideal echo, seed 7: TOUCHED the obstacle (car at 254, -148, 56 deg)
+BY-07 box 130 wide, 250 deep, +50 off the line                            23 of  24 round,   0 gave up; 3.7 looks, 5.2 turns (383 deg), 1010 mm a run, out 211 mm (at most 277)
+  WRONG: box 130 wide, 450 deep, -50 off the line, flat faces only square on, seed 6: TOUCHED the obstacle (car at 553, 8, -52 deg)
+  WRONG: box 130 wide, 450 deep, -50 off the line, the same, narrow beam, seed 7: TOUCHED the obstacle (car at 559, 11, -46 deg)
+BY-08 box 130 wide, 450 deep, -50 off the line                            22 of  24 round,   0 gave up; 4.3 looks, 5.2 turns (352 deg), 1236 mm a run, out 212 mm (at most 254)
+  WRONG: box 130 wide, 700 deep, +0 off the line, the same, narrow beam, seed 0: TOUCHED the obstacle (car at 184, -183, 22 deg)
+  WRONG: box 130 wide, 700 deep, +0 off the line, the same, narrow beam, seed 2: TOUCHED the obstacle (car at 183, -175, 17 deg)
+  WRONG: box 130 wide, 700 deep, +0 off the line, the same, narrow beam, seed 3: TOUCHED the obstacle (car at 441, -161, -13 deg)
+  WRONG: box 130 wide, 700 deep, +0 off the line, the same, narrow beam, seed 4: TOUCHED the obstacle (car at 171, -176, 17 deg)
+  WRONG: box 130 wide, 700 deep, +0 off the line, the same, narrow beam, seed 5: TOUCHED the obstacle (car at 160, -174, 16 deg)
+  WRONG: box 130 wide, 700 deep, +0 off the line, the same, narrow beam, seed 6: TOUCHED the obstacle (car at 197, -161, 9 deg)
+BY-09 box 130 wide, 700 deep, +0 off the line                             18 of  24 round,   0 gave up; 3.9 looks, 5.3 turns (330 deg), 1306 mm a run, out 230 mm (at most 309)
+  WRONG: box 130 wide, 1000 deep, +50 off the line, the same, narrow beam, seed 7: TOUCHED the obstacle (car at 412, -143, 29 deg)
+BY-10 box 130 wide, 1000 deep, +50 off the line                           23 of  24 round,   0 gave up; 5.2 looks, 7.2 turns (405 deg), 1741 mm a run, out 222 mm (at most 288)
+  WRONG: box 160 wide, 100 deep, +50 off the line, the same, narrow beam, seed 6: TOUCHED the obstacle (car at 213, -10, 49 deg)
+BY-11 box 160 wide, 100 deep, +50 off the line                            23 of  24 round,   0 gave up; 3.2 looks, 4.2 turns (334 deg), 877 mm a run, out 210 mm (at most 239)
+BY-12 box 160 wide, 250 deep, -50 off the line                            24 of  24 round,   0 gave up; 3.8 looks, 5.7 turns (401 deg), 1048 mm a run, out 213 mm (at most 280)
+  WRONG: box 160 wide, 450 deep, +0 off the line, flat faces only square on, seed 1: TOUCHED the obstacle (car at 188, -183, -21 deg)
+  WRONG: box 160 wide, 450 deep, +0 off the line, the same, narrow beam, seed 3: TOUCHED the obstacle (car at 196, -185, -23 deg)
+BY-13 box 160 wide, 450 deep, +0 off the line                             22 of  24 round,   0 gave up; 3.9 looks, 6.1 turns (369 deg), 1218 mm a run, out 241 mm (at most 332)
+  WRONG: box 160 wide, 700 deep, +50 off the line, flat faces only square on, seed 6: TOUCHED the obstacle (car at 432, -129, -16 deg)
+BY-14 box 160 wide, 700 deep, +50 off the line                            23 of  24 round,   0 gave up; 4.8 looks, 6.8 turns (411 deg), 1460 mm a run, out 220 mm (at most 316)
+  WRONG: box 160 wide, 1000 deep, -50 off the line, flat faces only square on, seed 5: TOUCHED the obstacle (car at 679, 122, -6 deg)
+  WRONG: box 160 wide, 1000 deep, -50 off the line, flat faces only square on, seed 7: TOUCHED the obstacle (car at 612, 123, -6 deg)
+  WRONG: box 160 wide, 1000 deep, -50 off the line, the same, narrow beam, seed 6: TOUCHED the obstacle (car at 736, 138, 29 deg)
+BY-15 box 160 wide, 1000 deep, -50 off the line                           21 of  24 round,   0 gave up; 5.5 looks, 6.3 turns (383 deg), 1747 mm a run, out 231 mm (at most 343)
+BY-16 box 240 wide, 100 deep, -50 off the line                            24 of  24 round,   0 gave up; 3.1 looks, 4.2 turns (330 deg), 1284 mm a run, out 263 mm (at most 314)
+  WRONG: box 240 wide, 250 deep, +0 off the line, ideal echo, seed 0: TOUCHED the obstacle (car at 198, -257, 38 deg)
+  WRONG: box 240 wide, 250 deep, +0 off the line, ideal echo, seed 2: TOUCHED the obstacle (car at 222, -252, 42 deg)
+  WRONG: box 240 wide, 250 deep, +0 off the line, flat faces only square on, seed 0: TOUCHED the obstacle (car at 193, -261, 45 deg)
+  WRONG: box 240 wide, 250 deep, +0 off the line, flat faces only square on, seed 1: TOUCHED the obstacle (car at 227, -252, 44 deg)
+  WRONG: box 240 wide, 250 deep, +0 off the line, flat faces only square on, seed 6: TOUCHED the obstacle (car at 202, -251, 38 deg)
+  WRONG: box 240 wide, 250 deep, +0 off the line, the same, narrow beam, seed 3: TOUCHED the obstacle (car at 187, 224, -19 deg)
+  WRONG: box 240 wide, 250 deep, +0 off the line, the same, narrow beam, seed 4: TOUCHED the obstacle (car at 191, 248, -33 deg)
+  WRONG: box 240 wide, 250 deep, +0 off the line, the same, narrow beam, seed 5: TOUCHED the obstacle (car at 170, 236, -23 deg)
+BY-17 box 240 wide, 250 deep, +0 off the line                             16 of  24 round,   0 gave up; 3.4 looks, 5.1 turns (362 deg), 1348 mm a run, out 287 mm (at most 377)
+BY-18 box 240 wide, 450 deep, +50 off the line                            24 of  24 round,   0 gave up; 4.4 looks, 6.5 turns (413 deg), 1273 mm a run, out 236 mm (at most 292)
+  WRONG: box 240 wide, 700 deep, -50 off the line, ideal echo, seed 7: TOUCHED the obstacle (car at 686, 205, -49 deg)
+BY-19 box 240 wide, 700 deep, -50 off the line                            23 of  24 round,   0 gave up; 4.9 looks, 6.3 turns (376 deg), 1910 mm a run, out 278 mm (at most 356)
+  WRONG: box 240 wide, 1000 deep, +0 off the line, the same, narrow beam, seed 5: TOUCHED the obstacle (car at 430, 217, -9 deg)
+BY-20 box 240 wide, 1000 deep, +0 off the line                            23 of  24 round,   0 gave up; 5.6 looks, 8.5 turns (444 deg), 2230 mm a run, out 316 mm (at most 425)
+  WRONG: part sticking out LEFT 450 mm back (the bypass side), the same, narrow beam, seed 5: TOUCHED the obstacle (car at 442, 349, 32 deg)
+BY-21 part sticking out LEFT 450 mm back (the bypass side)                23 of  24 round,   0 gave up; 5.1 looks, 8.4 turns (530 deg), 1954 mm a run, out 450 mm (at most 498)
+  WRONG: part sticking out RIGHT 450 mm back (the bypass side), flat faces only square on, seed 1: TOUCHED the obstacle (car at 632, -411, 33 deg)
+  WRONG: part sticking out RIGHT 450 mm back (the bypass side), flat faces only square on, seed 3: TOUCHED the obstacle (car at 634, -401, 27 deg)
+  WRONG: part sticking out RIGHT 450 mm back (the bypass side), the same, narrow beam, seed 1: TOUCHED the obstacle (car at 465, 150, 18 deg)
+  WRONG: part sticking out RIGHT 450 mm back (the bypass side), the same, narrow beam, seed 5: TOUCHED the obstacle (car at 125, 147, -8 deg)
+  WRONG: part sticking out RIGHT 450 mm back (the bypass side), the same, narrow beam, seed 6: TOUCHED the obstacle (car at 156, 144, -7 deg)
+  WRONG: part sticking out RIGHT 450 mm back (the bypass side), the same, narrow beam, seed 7: TOUCHED the obstacle (car at 456, 154, 22 deg)
+BY-22 part sticking out RIGHT 450 mm back (the bypass side)               18 of  24 round,   0 gave up; 4.2 looks, 7.4 turns (473 deg), 1586 mm a run, out 379 mm (at most 538)
+  WRONG: part sticking out LEFT 200 mm back (seen by the first scan), flat faces only square on, seed 7: TOUCHED the obstacle (car at 451, 372, -45 deg)
+BY-23 part sticking out LEFT 200 mm back (seen by the first scan)         23 of  24 round,   0 gave up; 5.0 looks, 8.5 turns (518 deg), 1560 mm a run, out 402 mm (at most 453)
+  WRONG: part sticking out RIGHT 200 mm back (seen by the first scan), flat faces only square on, seed 7: TOUCHED the obstacle (car at 488, 165, -43 deg)
+  WRONG: part sticking out RIGHT 200 mm back (seen by the first scan), the same, narrow beam, seed 6: TOUCHED the obstacle (car at 241, 154, 23 deg)
+  WRONG: part sticking out RIGHT 200 mm back (seen by the first scan), the same, narrow beam, seed 7: TOUCHED the obstacle (car at 89, 146, -8 deg)
+BY-24 part sticking out RIGHT 200 mm back (seen by the first scan)        21 of  24 round,   0 gave up; 4.2 looks, 5.2 turns (373 deg), 1461 mm a run, out 225 mm (at most 343)
+  WRONG: T shape: parts sticking out on BOTH sides 250 mm back, flat faces only square on, seed 7: TOUCHED the obstacle (car at 243, -325, -45 deg)
+  WRONG: T shape: parts sticking out on BOTH sides 250 mm back, the same, narrow beam, seed 3: TOUCHED the obstacle (car at 528, 359, -70 deg)
+BY-25 T shape: parts sticking out on BOTH sides 250 mm back               22 of  24 round,   0 gave up; 5.0 looks, 8.4 turns (520 deg), 1513 mm a run, out 390 mm (at most 440)
+  WRONG: wider at the far end (3 steps), flat faces only square on, seed 4: TOUCHED the obstacle (car at 507, -300, -42 deg)
+BY-26 wider at the far end (3 steps)                                      23 of  24 round,   0 gave up; 5.4 looks, 9.4 turns (554 deg), 1721 mm a run, out 349 mm (at most 406)
+  WRONG: a second box in the lane, on the right, the same, narrow beam, seed 0: TOUCHED the obstacle (car at 172, -186, -25 deg)
+  WRONG: a second box in the lane, on the right, the same, narrow beam, seed 1: TOUCHED the obstacle (car at 180, -190, -32 deg)
+  WRONG: a second box in the lane, on the right, the same, narrow beam, seed 3: TOUCHED the obstacle (car at 170, -192, -39 deg)
+  WRONG: a second box in the lane, on the right, the same, narrow beam, seed 6: TOUCHED the obstacle (car at 370, -410, 0 deg)
+BY-27 a second box in the lane, on the right                              20 of  24 round,   0 gave up; 3.7 looks, 7.4 turns (469 deg), 1584 mm a run, out 446 mm (at most 569)
+  WRONG: a second box in the lane, on the left, ideal echo, seed 0: gave up (car at 225, 238, -1 deg)
+  WRONG: a second box in the lane, on the left, ideal echo, seed 2: gave up (car at 226, 231, -2 deg)
+  WRONG: a second box in the lane, on the left, ideal echo, seed 4: gave up (car at 229, 243, -5 deg)
+  WRONG: a second box in the lane, on the left, ideal echo, seed 5: gave up (car at 115, 218, 2 deg)
+  WRONG: a second box in the lane, on the left, ideal echo, seed 7: TOUCHED the obstacle (car at 344, 389, 10 deg)
+  WRONG: a second box in the lane, on the left, flat faces only square on, seed 0: gave up (car at 227, 238, -0 deg)
+  WRONG: a second box in the lane, on the left, flat faces only square on, seed 2: gave up (car at 224, 235, -2 deg)
+  WRONG: a second box in the lane, on the left, flat faces only square on, seed 4: gave up (car at 72, 242, 0 deg)
+  WRONG: a second box in the lane, on the left, flat faces only square on, seed 5: gave up (car at 98, 256, -2 deg)
+  WRONG: a second box in the lane, on the left, flat faces only square on, seed 6: gave up (car at 220, 200, -6 deg)
+  WRONG: a second box in the lane, on the left, flat faces only square on, seed 7: gave up (car at 110, 237, 1 deg)
+  WRONG: a second box in the lane, on the left, the same, narrow beam, seed 0: TOUCHED the obstacle (car at 395, 405, 5 deg)
+  WRONG: a second box in the lane, on the left, the same, narrow beam, seed 1: TOUCHED the obstacle (car at 374, 407, 2 deg)
+  WRONG: a second box in the lane, on the left, the same, narrow beam, seed 3: TOUCHED the obstacle (car at 374, 400, 7 deg)
+  WRONG: a second box in the lane, on the left, the same, narrow beam, seed 5: TOUCHED the obstacle (car at 307, 283, 40 deg)
+  WRONG: a second box in the lane, on the left, the same, narrow beam, seed 7: TOUCHED the obstacle (car at 308, 296, 43 deg)
+BY-28 a second box in the lane, on the left                                8 of  24 round,  10 gave up; 2.0 looks, 7.2 turns (438 deg), 1107 mm a run, out 331 mm (at most 445)
+  WRONG: a wall 300 mm to the right: goes left, flat faces only square on, seed 5: TOUCHED the obstacle (car at 182, 195, -36 deg)
+  WRONG: a wall 300 mm to the right: goes left, flat faces only square on, seed 6: TOUCHED the obstacle (car at 198, 203, -51 deg)
+  WRONG: a wall 300 mm to the right: goes left, the same, narrow beam, seed 0: TOUCHED the obstacle (car at 181, 190, -32 deg)
+  WRONG: a wall 300 mm to the right: goes left, the same, narrow beam, seed 4: TOUCHED the obstacle (car at 355, 7, -66 deg)
+BY-29 a wall 300 mm to the right: goes left                               20 of  24 round,   0 gave up; 4.0 looks, 5.5 turns (391 deg), 1271 mm a run, out 231 mm (at most 273)
+  WRONG: a box beside the car that the scan cannot see (side-step blocked), ideal echo, seed 2: TOUCHED the obstacle (car at 201, 206, -52 deg)
+  WRONG: a box beside the car that the scan cannot see (side-step blocked), flat faces only square on, seed 6: TOUCHED the obstacle (car at 205, 222, -59 deg)
+  WRONG: a box beside the car that the scan cannot see (side-step blocked), the same, narrow beam, seed 0: TOUCHED the obstacle (car at 184, 204, -45 deg)
+  WRONG: a box beside the car that the scan cannot see (side-step blocked), the same, narrow beam, seed 1: TOUCHED the obstacle (car at 167, 199, -37 deg)
+  WRONG: a box beside the car that the scan cannot see (side-step blocked), the same, narrow beam, seed 2: TOUCHED the obstacle (car at 187, 222, -52 deg)
+  WRONG: a box beside the car that the scan cannot see (side-step blocked), the same, narrow beam, seed 6: TOUCHED the obstacle (car at -68, 174, -7 deg)
+BY-30 a box beside the car that the scan cannot see (side-step blocked)   18 of  24 round,   0 gave up; 3.5 looks, 6.2 turns (551 deg), 956 mm a run, out 242 mm (at most 289)
+BY-31 walls close on both sides: no way round                              0 of  24 round,  24 gave up; 0.0 looks, 0.7 turns (90 deg), 309 mm a run, out 0 mm (at most 0)
+BY-32 a wall across everything: no way round                               0 of  24 round,  24 gave up; 0.3 looks, 2.7 turns (148 deg), 498 mm a run, out 0 mm (at most 0)
+  WRONG: an obstacle 3 m long: gives up, flat faces only square on, seed 3: TOUCHED the obstacle (car at 459, -180, 11 deg)
+  WRONG: an obstacle 3 m long: gives up, flat faces only square on, seed 5: TOUCHED the obstacle (car at 1090, -178, 10 deg)
+  WRONG: an obstacle 3 m long: gives up, the same, narrow beam, seed 0: TOUCHED the obstacle (car at 188, -183, 12 deg)
+  WRONG: an obstacle 3 m long: gives up, the same, narrow beam, seed 1: TOUCHED the obstacle (car at 187, -180, 10 deg)
+  WRONG: an obstacle 3 m long: gives up, the same, narrow beam, seed 4: TOUCHED the obstacle (car at 388, -202, 24 deg)
+  WRONG: an obstacle 3 m long: gives up, the same, narrow beam, seed 6: TOUCHED the obstacle (car at 381, -197, 21 deg)
+BY-33 an obstacle 3 m long: gives up                                       0 of  24 round,  18 gave up; 6.0 looks, 8.8 turns (338 deg), 1895 mm a run, out 0 mm (at most 0)
+bypass simulation: 792 runs, failures: 90
+[bypass] exit code 1
+PASS  B1 pack 1|5<<3 == 0x29
+PASS  B2 cross-byte 0xABC -> BC 0A
+PASS  B3 signed -1/-64/+63 round trip
+PASS  B4 overflow flagged, guards untouched
+PASS  B5 overflow is sticky
+PASS  B6 unsigned 1/6/4095/511 round trip
+
+ALL PASSED: 0 failure(s)
+[test_bitpack] exit code 0
+      tm: 54 11 99 3E E2 F8 8D 57 D0 48 E2 91 B5 60 9A F7 8F 20 60 41 A1 07
+PASS  C1 telemetry v4 == 54 11 99 3E ... 41 A1 07 (22 B)
+PASS  C2 telemetry decode ok
+PASS  C2 round trip: seq, speeds, enc wrap, fault, hump
+PASS  C2 round trip: obstacle profile 45cm/12cm/idx13/30/63/TURN_LEFT
+PASS  C2 round trip: lift cause tipped, IMU faults 0x05
+PASS  C2 round trip: tilt +5.0 / -3.0 deg
+PASS  C3 reject wrong length
+PASS  C3 reject unknown version
+PASS  C3 reject version 3
+      hb: 3C 10 88 3E 80 81 00
+PASS  C4 heartbeat v4 == 3C 10 88 3E 80 81 00
+PASS  C5 0x29 -> START seq 5, FORWARDED
+PASS  C5 0x32 -> STOP seq 6, FORWARDED
+PASS  C5 code 6 -> INVALID
+PASS  C5 code 0 -> INVALID
+PASS  C5 2-byte payload -> INVALID
+PASS  C5 empty payload -> INVALID
+PASS  C6 ACK == 29 00
+PASS  C6 ACK DUPLICATE == 29 01
+PASS  C7 speed 100/-100 -> 63/-64
+PASS  C7 hump 200/300/99 -> 127/127/15
+PASS  C7 obstacle 600 cm echo -> 510 (never 511), 150 deg -> idx 24
+PASS  C7 no echo -> 511, no bearing -> 31
+PASS  C7 32 deg rounds to 30 deg (idx 0)
+PASS  C7 33 deg rounds to 35 deg (idx 1)
+PASS  C7 151 deg (outside servo range) -> no bearing
+PASS  C7 distance 99999 -> 16383
+PASS  C8 small buffer -> 0
+
+ALL PASSED: 0 failure(s)
+[test_codec] exit code 0
+telemetry : 171 bits -> 22 bytes on the wire
+heartbeat :  51 bits ->  7 bytes on the wire
+command   :   8 bits ->  1 bytes on the wire
+ack       :  10 bits ->  2 bytes on the wire
+telem_q message  (telem_snapshot_t): 24 bytes
+remote_cmd_q msg (remote_cmd_t)    : 1 bytes
+format version   : 4
+
+ALL PASSED
+[test_format] exit code 0
+PC checks failed: bypass
